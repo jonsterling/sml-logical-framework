@@ -158,9 +158,12 @@ struct
   val eqCtx = Option.isSome o eqCtxAux emptyEqEnv
 
   fun findVar gm x = 
-    case gm of 
-       [] => NONE
-     | (y, cl) :: gm' => if x = y then SOME cl else findVar gm' x 
+    let
+      fun go [] = NONE 
+        | go ((y, cl) :: gm') = if x = y then SOME cl else go gm' 
+    in
+      go (List.rev gm)
+    end
 
   fun ensure b msg = 
     if b then 
