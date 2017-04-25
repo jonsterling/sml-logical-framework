@@ -35,6 +35,12 @@ struct
     Sym.Env.lookup rho x
     handle _ => x
 
+  fun envFromSpine (sp, xs) = 
+    ListPair.foldr
+      (fn (x, n, rho) => Sym.Env.insert rho x n)
+      Sym.Env.empty
+      (xs, List.rev sp)
+
   fun eqVar (rho1, rho2) (x1, x2) = 
     lookupVar rho1 x1 = lookupVar rho2 x2
 
@@ -79,7 +85,7 @@ struct
       case Sym.Env.find rho x of 
         SOME (xs \\ r) =>
           let
-            val rho' = ListPair.foldr (fn (x, n, rho) => Sym.Env.insert rho x n) Sym.Env.empty (xs, sp')
+            val rho' = envFromSpine (sp', xs)
           in
             substRtm rho' r
           end
@@ -152,12 +158,6 @@ struct
   val eqCl = eqClAux emptyEqEnv
   val eqCtx = Option.isSome o eqCtxAux emptyEqEnv
 
-  fun envFromSpine (sp, psi) = 
-    ListPair.foldr
-      (fn ((x, _), n, rho) => Sym.Env.insert rho x n)
-      Sym.Env.empty
-      (psi, sp)
-
   fun findVar gm x = 
     case gm of 
        [] => NONE
@@ -190,15 +190,15 @@ struct
     case findVar gm x of 
        SOME (PI (psi, rcl)) =>
          (chkSp gm sp psi;
-          substRcl (envFromSpine (sp, psi)) rcl)
+          substRcl (envFromSpine (sp, List.map #1 psi)) rcl)
      | NONE => raise Fail "Could not find variable"
 
   and chkSp gm (sp : spine) psi : unit =
-    case (ListUtil.unsnoc sp, ListUtil.unsnoc psi) of 
-       (NONE, NONE) => ()
-     | (SOME (sp', n), SOME (psi', (x, cl))) =>
+    case (sp, ListUtil.unsnoc psi) of 
+       ([], NONE) => ()
+     | (n :: sp', SOME (psi', (x, cl))) =>
          let
-           val rho = envFromSpine (sp', psi')
+           val rho = envFromSpine (sp', List.map #1 psi')
          in
            chk gm n (substCl rho cl);
            chkSp gm sp psi'
