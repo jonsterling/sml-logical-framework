@@ -4,15 +4,14 @@ structure TinyLf : TINY_LF =
 struct
   type var = Sym.symbol
 
-  type 'a ctx = (var * 'a) list
-
   datatype rclass = 
      ` of rtm 
    | TYPE
-  and class = PI of class ctx * rclass
+  and class = PI of ctx * rclass
   and rtm = `@ of var * spine
   and ntm = \\ of var list * rtm
   withtype spine = ntm list
+  and ctx = (var * class) list
 
   infix `@ \\
 
@@ -169,7 +168,7 @@ struct
     else
       raise Fail msg
 
-  fun okCl (gm : class ctx) (PI (psi, rcl)) =
+  fun okCl gm (PI (psi, rcl)) =
     let
       val _ = ctx gm psi
     in

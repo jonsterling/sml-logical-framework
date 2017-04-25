@@ -4,15 +4,13 @@ signature TINY_LF =
 sig
   type var
 
-  type 'a ctx = (var * 'a) list
-
   (* atomic classifiers *)
   datatype rclass = 
      ` of rtm 
    | TYPE
 
   (* classifiers *)
-  and class = PI of class ctx * rclass
+  and class = PI of (var * class) list * rclass
 
   (* atomic terms *)
   and rtm = `@ of var * ntm list
@@ -21,6 +19,7 @@ sig
   and ntm = \\ of var list * rtm
 
   type spine = ntm list
+  type ctx = (var * class) list
 
   (* alpha equivalence *)
   val eqRcl : rclass * rclass -> bool
@@ -28,12 +27,12 @@ sig
   val eqRtm : rtm * rtm -> bool
   val eqNtm : ntm * ntm -> bool
   val eqSpine : spine * spine -> bool
-  val eqCtx : class ctx * class ctx -> bool
+  val eqCtx : ctx * ctx -> bool
 
   (* typing judgments *)
-  val okCl : class ctx -> class -> unit
-  val chk : class ctx -> ntm -> class -> unit
-  val inf : class ctx -> rtm -> rclass
-  val chkSp : class ctx -> spine -> class ctx -> unit
-  val ctx : class ctx -> class ctx -> unit
+  val okCl : ctx -> class -> unit
+  val chk : ctx -> ntm -> class -> unit
+  val inf : ctx -> rtm -> rclass
+  val chkSp : ctx -> spine -> ctx -> unit
+  val ctx : ctx -> ctx -> unit
 end
