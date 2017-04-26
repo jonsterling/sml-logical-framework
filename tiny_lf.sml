@@ -15,11 +15,17 @@ struct
 
     val description = 
       fn EXPECTED_TYPE {rtm, expected, actual} =>
-           "The classifier of " ^ Print.rtm rtm ^ " was " ^ Print.rclass actual ^ " but it should have been " ^ Print.rclass expected ^ "."
+           "The classifier of [" ^ Print.rtm rtm ^ "] was [" ^ Print.rclass actual ^ "] but it should have been [" ^ Print.rclass expected ^ "]."
        | MISSING_VARIABLE {var, ctx} => 
-           "Could not find variable " ^ Sym.toString var ^ " in context " ^ Print.ctx ctx ^ "."
+           "Could not find variable [" ^ Sym.toString var ^ "] in context [" ^ Print.ctx ctx ^ "]."
        | SPINE_MISMATCH {spine, ctx} => 
-           "The spine " ^ Print.spine spine ^ " could not be checked about a context of incorrect length, " ^ Print.ctx ctx ^ "."
+           "The spine [" ^ Print.spine spine ^ "] could not be checked about a context of incorrect length, [" ^ Print.ctx ctx ^ "]."
+
+    fun debug e = 
+      e ()
+      handle LfExn err => 
+        (print ("\n" ^ description err ^ "\n");
+         raise LfExn err)
   end
 
   fun findVar Gamma x = 

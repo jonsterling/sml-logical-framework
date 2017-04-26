@@ -58,9 +58,17 @@ struct
      (C Sg.DIMABS, [[[] ==> `Dim] ==> `Exp] ==> `Exp),
      (C Sg.DIMAP, [[] ==> `Exp, [] ==> `Dim] ==> `Exp)]
 
-  val three = Su (Su (Su Ze))
-  val threeTy = inf mySig three
-  val welp = ctx [] mySig
-  val _ = print (Print.ctx mySig ^ "\n")
-  val _ = print (Print.rtm three ^ " : " ^ Print.rclass threeTy ^ "\n")
+  fun test () = 
+    let
+      val three = Su (Su (Su Ze))
+      val threeTy = inf mySig three
+      val welp = ctx [] mySig
+      val _ = print (Print.ctx mySig ^ "\n")
+      val _ = print (Print.rtm three ^ " : " ^ Print.rclass threeTy ^ "\n")
+    in
+      ()
+    end
+
+  val _ = Exn.debug test
+
 end
