@@ -15,14 +15,16 @@ struct
   infix `@ \\
 
 
-  fun toStringCl (PI (ctx, rcl)) = 
-    "{" ^ toStringCtx ctx ^ "}" ^ toStringRcl rcl
+  fun toStringCl (PI (psi, rcl)) = 
+    case psi of 
+       [] => toStringRcl rcl
+     | _ => "{" ^ toStringCtx psi ^ "}" ^ toStringRcl rcl
 
   and toStringCtx psi = 
     case psi of
        [] => "-"
      | (x, cl) :: [] => Sym.toString x ^ ":" ^ toStringCl cl
-     | (x, cl) :: psi' => Sym.toString x ^ ":" ^ toStringCl cl ^ "," ^ toStringCtx psi
+     | (x, cl) :: psi' => Sym.toString x ^ ":" ^ toStringCl cl ^ ", " ^ toStringCtx psi'
 
   and toStringRcl rcl = 
     case rcl of 
@@ -30,7 +32,9 @@ struct
      | TYPE => "*"
 
   and toStringRtm (x `@ sp) = 
-    Sym.toString x ^ "[" ^ toStringSp sp ^ "]"
+    case sp of 
+       [] => Sym.toString x
+     | _ => Sym.toString x ^ "[" ^ toStringSp sp ^ "]"
 
   and toStringSp sp = 
     case sp of 
@@ -39,7 +43,9 @@ struct
      | n :: sp => toStringNtm n ^ "," ^ toStringSp sp
     
   and toStringNtm (xs \\ r) = 
-    "[" ^ toStringVars xs ^ "]" ^ toStringRtm r
+    case xs of 
+       [] => toStringRtm r
+     | _ =>  "[" ^ toStringVars xs ^ "]" ^ toStringRtm r
   
   and toStringVars xs = 
     case xs of 
