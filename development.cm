@@ -6,3 +6,4 @@ Group is
   list_util.sml
   tiny_lf.sig
   tiny_lf.sml
+  example.sml
