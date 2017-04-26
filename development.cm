@@ -7,6 +7,7 @@ Group is
   typing.sig
 
   list_util.sml
+  exn.fun
   symbol.fun
   syntax.fun
   typing.fun

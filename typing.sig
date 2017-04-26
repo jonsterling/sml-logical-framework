@@ -1,7 +1,7 @@
 signature LF_TYPING = 
 sig
   include LF_SYNTAX
-  structure LfExn : LF_EXN
+  structure LfExn : LF_EXN_UTIL
 
   (* typing judgments *)
   val okCl : ctx -> class -> unit

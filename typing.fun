@@ -19,12 +19,6 @@ struct
            "Could not find variable [" ^ Print.var var ^ "] in context [" ^ Print.ctx ctx ^ "]."
        | SPINE_MISMATCH {spine, ctx} => 
            "The spine [" ^ Print.spine spine ^ "] could not be checked about a context of incorrect length, [" ^ Print.ctx ctx ^ "]."
-
-    fun debug e = 
-      e ()
-      handle LfExn err => 
-        (print ("\n" ^ description err ^ "\n");
-         raise LfExn err)
   end
 
   fun findVar Gamma x = 
@@ -104,4 +98,6 @@ struct
      | SOME (Psi', (x, cl)) => 
        (ctx Gamma Psi';
         okCl (Gamma @ Psi') cl)
+
+  structure LfExn = LfExnUtil (LfExn)
 end
