@@ -26,8 +26,16 @@ sig
   val eqCl : class * class -> bool
   val eqRtm : rtm * rtm -> bool
   val eqNtm : ntm * ntm -> bool
-  val eqSpine : spine * spine -> bool
+  val eqSp : spine * spine -> bool
   val eqCtx : ctx * ctx -> bool
+
+  (* pringint *)
+  val toStringRcl : rclass -> string
+  val toStringCl : class -> string
+  val toStringRtm : rtm -> string
+  val toStringNtm : ntm -> string 
+  val toStringSp : spine -> string 
+  val toStringCtx : ctx -> string
 
   (* typing judgments *)
   val okCl : ctx -> class -> unit

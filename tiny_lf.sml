@@ -13,7 +13,41 @@ struct
   withtype spine = ntm list
   and ctx = (var * class) list
 
+
   infix `@ \\
+
+
+  fun toStringCl (PI (ctx, rcl)) = 
+    "{" ^ toStringCtx ctx ^ "}" ^ toStringRcl rcl
+
+  and toStringCtx psi = 
+    case psi of
+       [] => "-"
+     | (x, cl) :: [] => Sym.toString x ^ ":" ^ toStringCl cl
+     | (x, cl) :: psi' => Sym.toString x ^ ":" ^ toStringCl cl ^ "," ^ toStringCtx psi
+
+  and toStringRcl rcl = 
+    case rcl of 
+       `r => toStringRtm r
+     | TYPE => "*"
+
+  and toStringRtm (x `@ sp) = 
+    Sym.toString x ^ "[" ^ toStringSp sp ^ "]"
+
+  and toStringSp sp = 
+    case sp of 
+       [] => "-"
+     | n :: [] => toStringNtm n
+     | n :: sp => toStringNtm n ^ "," ^ toStringSp sp
+    
+  and toStringNtm (xs \\ r) = 
+    "[" ^ toStringVars xs ^ "]" ^ toStringRtm r
+  
+  and toStringVars xs = 
+    case xs of 
+       [] => ""
+     | x :: [] => Sym.toString x
+     | x :: xs => Sym.toString x ^ "," ^ toStringVars xs
 
   type eq_env = var Sym.Env.dict * var Sym.Env.dict
   val emptyEqEnv = (Sym.Env.empty, Sym.Env.empty)
@@ -135,14 +169,14 @@ struct
   
   and eqRtmAux env (x1 `@ sp1, x2 `@ sp2) = 
     eqVar env (x1, x2)
-      andalso eqSpineAux env (sp1, sp2)
+      andalso eqSpAux env (sp1, sp2)
 
-  and eqSpineAux env (sp1, sp2) = 
+  and eqSpAux env (sp1, sp2) = 
     case (sp1, sp2) of
        ([],[]) => true
      | (n1 :: sp1', n2 :: sp2') =>
          eqNtmAux env (n1, n2)
-           andalso eqSpineAux env (sp1', sp2')
+           andalso eqSpAux env (sp1', sp2')
      | _ => false
 
   and eqNtmAux env (xs1 \\ r1, xs2 \\ r2) =
@@ -152,7 +186,7 @@ struct
 
   val eqRcl = eqRclAux emptyEqEnv
   val eqNtm = eqNtmAux emptyEqEnv
-  val eqSpine = eqSpineAux emptyEqEnv
+  val eqSp = eqSpAux emptyEqEnv
   val eqRtm = eqRtmAux emptyEqEnv
   val eqCl = eqClAux emptyEqEnv
   val eqCtx = Option.isSome o eqCtxAux emptyEqEnv
@@ -196,16 +230,16 @@ struct
      | NONE => raise Fail "Could not find variable"
 
   and chkSp gm (sp : spine) psi : unit =
-    case (sp, ListUtil.unsnoc psi) of 
-       ([], NONE) => ()
-     | (n :: sp', SOME (psi', (x, cl))) =>
+    case (sp, psi) of 
+       ([], []) => ()
+     | (n :: sp', (x, cl) :: psi') =>
          let
            val rho = envFromSpine (sp', List.map #1 psi')
          in
            chk gm n (substCl rho cl);
-           chkSp gm sp psi'
+           chkSp gm sp' psi'
          end
-     | _ => raise Fail "chkSp length mismatch"
+     | _ => raise Fail ("chkSp length mismatch: " ^ toStringSp sp ^ " / " ^ toStringCtx psi)
 
   and ctx gm psi = 
     case ListUtil.unsnoc psi of 
