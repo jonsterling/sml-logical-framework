@@ -3,7 +3,7 @@ struct
   open Syn
   infix `@ \
 
-  structure Exn = 
+  structure LfExn = 
   struct
     datatype error = 
        EXPECTED_TYPE of {rtm : rtm, expected : rclass, actual : rclass}
@@ -39,10 +39,11 @@ struct
     if b then 
       ()
     else
-      raise Exn.LfExn err
+      raise LfExn.LfExn err
 
-  fun okCl Gamma (PI (Psi, rcl)) =
+  fun okCl Gamma cl =
     let
+      val Psi \ rcl = Unbind.class cl
       val _ = ctx Gamma Psi
     in
       case rcl of 
@@ -50,27 +51,32 @@ struct
            let
              val rcl = inf (Gamma @ Psi) r
            in
-             ensure (Eq.rclass (rcl, TYPE), Exn.EXPECTED_TYPE {rtm = r, expected = TYPE, actual = rcl})
+             ensure (Eq.rclass (rcl, TYPE), LfExn.EXPECTED_TYPE {rtm = r, expected = TYPE, actual = rcl})
            end
        | TYPE => ()
     end
 
-  and chk Gamma n (PI (Psi, rcl)) =
+  and chk Gamma n cl =
     let
+      val Psi \ rcl = Unbind.class cl
       val xs \ r = Unbind.ntm n
       val (rho, Psi') = Ren.rebindCtx xs Psi
       val rcl' = Ren.rclass rho rcl
       val rcl'' = inf (Gamma @ Psi') r
     in
-      ensure (Eq.rclass (rcl', rcl''), Exn.EXPECTED_TYPE {rtm = r, expected = rcl', actual = rcl''})
+      ensure (Eq.rclass (rcl', rcl''), LfExn.EXPECTED_TYPE {rtm = r, expected = rcl', actual = rcl''})
     end
 
   and inf Gamma (x `@ sp) =
     case findVar Gamma x of 
-       SOME (PI (Psi, rcl)) =>
-         (chkSp Gamma sp Psi;
-          Subst.rclass (Subst.zipSpine (List.map #1 Psi, sp)) rcl)
-     | NONE => raise Exn.LfExn (Exn.MISSING_VARIABLE {var = x, ctx = Gamma})
+       SOME cl =>
+         let 
+           val Psi \ rcl = Unbind.class cl
+         in
+           chkSp Gamma sp Psi;
+           Subst.rclass (Subst.zipSpine (List.map #1 Psi, sp)) rcl
+         end
+     | NONE => raise LfExn.LfExn (LfExn.MISSING_VARIABLE {var = x, ctx = Gamma})
 
   and chkSp Gamma =
     let 
@@ -89,7 +95,7 @@ struct
       fn sp => fn Psi => 
         go (sp, Psi)
         handle LengthMismatch => 
-          raise Exn.LfExn (Exn.SPINE_MISMATCH {spine = sp, ctx = Psi})
+         raise LfExn.LfExn (LfExn.SPINE_MISMATCH {spine = sp, ctx = Psi})
     end
 
   and ctx Gamma Psi = 

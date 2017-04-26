@@ -41,8 +41,8 @@ struct
   fun Su e = C Sg.SU `@ [[] \\ e]
   fun Lam (x, e) = C Sg.LAM `@ [[x] \\ e]
 
-  fun ==> (cls, rcl) = 
-    PI (List.map (fn cl => (Sym.new (), cl)) cls, rcl)
+  fun ==> (cls, rcl) =
+    pi (List.map (fn cl => (Sym.new (), cl)) cls, rcl)
 
   infix ==>
 
@@ -69,6 +69,6 @@ struct
       ()
     end
 
-  val _ = Exn.debug test
+  val _ = LfExn.debug test
 
 end

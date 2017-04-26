@@ -7,10 +7,10 @@ struct
   datatype rclass =
      ` of rtm
    | TYPE
-  and class = PI of (var * class) list * rclass
   and rtm = `@ of var * ntm list
-  and ntm_view = \ of var list * rtm
-  withtype ntm = ntm_view
+  and ('a, 'b) binder = \ of 'a list * 'b
+  and class = PI of (var * class, rclass) binder
+  withtype ntm = (var, rtm) binder
 
   type spine = ntm list
   type ctx = (var * class) list
@@ -34,12 +34,12 @@ struct
   struct
     type ren = var Sym.Env.dict
 
-    fun class rho (PI (Psi, rcl)) =
+    fun class rho (PI (Psi \ rcl)) =
       let
         val (rho', Psi') = ctx rho Psi
         val rcl' = rclass rho' rcl
       in
-        PI (Psi', rcl')
+        PI (Psi' \ rcl')
       end
     and rclass rho =
       fn TYPE => TYPE
@@ -74,10 +74,8 @@ struct
   fun xs \\ r = 
     xs \ r
 
-  structure Bind = 
-  struct
-    fun ntm n = n
-  end
+  fun pi (psi, rcl) = 
+    PI (psi \ rcl)
 
   structure Unbind = 
   struct
@@ -88,6 +86,15 @@ struct
         val r' = Ren.rtm rho r
       in
         xs' \ r'
+      end
+
+    fun class (PI (Psi \ rcl)) = 
+      let
+        val xs = List.map (Sym.named o Sym.toString o #1) Psi
+        val (rho, Psi') = Ren.rebindCtx xs Psi
+        val rcl' = Ren.rclass rho rcl
+      in
+        Psi' \ rcl'
       end
   end
 
@@ -104,7 +111,7 @@ struct
     fun var (rho1, rho2) (x1, x2) =
       Sym.eq (lookupVar rho1 x1, lookupVar rho2 x2)
 
-    fun classAux env (PI (Psi1, rcl1), PI (Psi2, rcl2)) =
+    fun classAux env (PI (Psi1 \ rcl1), PI (Psi2 \ rcl2)) =
       case ctxAux env (Psi1, Psi2) of
          SOME env' => rclassAux env' (rcl1, rcl2)
        | NONE => false
@@ -167,8 +174,8 @@ struct
         Sym.Env.empty
         (xs, sp)
 
-    fun class rho (PI (Psi, rcl)) =
-      PI (ctx rho Psi, rclass rho rcl)
+    fun class rho (PI (Psi \ rcl)) =
+      PI (ctx rho Psi \ rclass rho rcl)
     and ctx rho Psi =
       case Psi of
          [] => []
@@ -202,7 +209,7 @@ struct
        | x :: [] => Sym.toString x
        | x :: xs => Sym.toString x ^ "," ^ vars xs
 
-    fun class (PI (Psi, rcl)) =
+    fun class (PI (Psi \ rcl)) =
       case Psi of
          [] => rclass rcl
        | _ => "{" ^ ctx Psi ^ "}" ^ rclass rcl

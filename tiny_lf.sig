@@ -4,12 +4,11 @@ signature TINY_LF =
 sig
   include LF_SYNTAX
 
-  structure Exn :
+  structure LfExn :
   sig
     type error
     exception LfExn of error
     val description : error -> string
-
     val debug : (unit -> 'a) -> 'a
   end
 

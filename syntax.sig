@@ -4,27 +4,22 @@ sig
   type var = Sym.symbol
 
   type ntm (* normal terms *)
-
-  datatype rclass = ` of rtm  | TYPE (* atomic classifiers *)
-  and class = PI of (var * class) list * rclass (* general classifiers *)
-  and rtm = `@ of var * ntm list (* atomic terms *)
-
-  datatype ntm_view = \ of var list * rtm (* normal term patterns *)
-
   type spine = ntm list
+  type class (* general classifiers *)
   type ctx = (var * class) list
 
+  datatype rclass = ` of rtm  | TYPE (* atomic classifiers *)
+  and rtm = `@ of var * ntm list (* atomic terms *)
 
-  val \\ : var list * rtm -> ntm 
+  datatype ('a, 'b) binder = \ of 'a list * 'b
+
+  val \\ : var list * rtm -> ntm
+  val pi : (var * class) list * rclass -> class
 
   structure Unbind :
   sig
-    val ntm : ntm -> ntm_view
-  end
-
-  structure Bind : 
-  sig
-    val ntm : ntm_view -> ntm
+    val ntm : ntm -> (var, rtm) binder
+    val class : class -> (var * class, rclass) binder
   end
 
   (* alpha equivalence *)
