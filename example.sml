@@ -61,6 +61,6 @@ struct
   val three = Su (Su (Su Ze))
   val threeTy = inf mySig three
   val welp = ctx [] mySig
-  val _ = print (toStringCtx mySig ^ "\n")
-  val _ = print (toStringRtm three ^ " : " ^ toStringRcl threeTy ^ "\n")
+  val _ = print (Print.ctx mySig ^ "\n")
+  val _ = print (Print.rtm three ^ " : " ^ Print.rclass threeTy ^ "\n")
 end

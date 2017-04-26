@@ -21,34 +21,51 @@ sig
   type ctx = (var * class) list
 
   (* alpha equivalence *)
-  val eqRcl : rclass * rclass -> bool
-  val eqCl : class * class -> bool
-  val eqRtm : rtm * rtm -> bool
-  val eqNtm : ntm * ntm -> bool
-  val eqSp : spine * spine -> bool
-  val eqCtx : ctx * ctx -> bool
+  structure Eq :
+  sig 
+    val rclass : rclass * rclass -> bool
+    val class : class * class -> bool
+    val rtm : rtm * rtm -> bool
+    val ntm : ntm * ntm -> bool
+    val spine : spine * spine -> bool 
+    val ctx : ctx * ctx -> bool
+  end
 
-  type env = ntm Sym.Env.dict
-  val substRcl : env -> rclass -> rclass
-  val substCl : env -> class -> class
-  val substRtm : env -> rtm -> rtm
-  val substNtm : env -> ntm -> ntm
-  val substSp : env -> spine -> spine 
-  val substCtx : env -> ctx -> ctx
+  (* capture-avoiding renaming *)
+  structure Ren : 
+  sig
+    type ren = var Sym.Env.dict
+    val rclass : ren -> rclass -> rclass
+    val class : ren -> class -> class
+    val rtm : ren -> rtm -> rtm 
+    val ntm : ren -> ntm -> ntm
+    val spine : ren -> spine -> spine 
+    val ctx : ren -> ctx -> ren * ctx
 
-  type ren = var Sym.Env.dict
-  val renRcl : ren -> rclass -> rclass
-  val renCl : ren -> class -> class
-  val renRtm : ren -> rtm -> rtm 
-  val renNtm : ren -> ntm -> ntm
-  val renSp : ren -> spine -> spine 
-  val renCtx : ren -> ctx -> ren * ctx
+    val rebindCtx : var list -> ctx -> ren * ctx
+  end
 
-  (* printing *)
-  val toStringRcl : rclass -> string
-  val toStringCl : class -> string
-  val toStringRtm : rtm -> string
-  val toStringNtm : ntm -> string 
-  val toStringSp : spine -> string 
-  val toStringCtx : ctx -> string
+  (* capture-avoiding substitution *)
+  structure Subst : 
+  sig
+    type env = ntm Sym.Env.dict
+    val rclass : env -> rclass -> rclass
+    val class : env -> class -> class
+    val rtm : env -> rtm -> rtm
+    val ntm : env -> ntm -> ntm
+    val spine : env -> spine -> spine 
+    val ctx : env -> ctx -> ctx
+
+    val zipSpine : var list * spine -> env
+  end
+
+  structure Print : 
+  sig
+    val rclass : rclass -> string
+    val class : class -> string
+    val rtm : rtm -> string
+    val ntm : ntm -> string 
+    val spine : spine -> string 
+    val ctx : ctx -> string
+  end
 end
