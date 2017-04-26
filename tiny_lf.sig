@@ -1,9 +1,15 @@
 (* Jason Reed's Tiny LF, implementation by Jon Sterling *)
 
-
 signature TINY_LF =
 sig
   include LF_SYNTAX
+
+  structure Exn :
+  sig
+    type error
+    exception LfExn of error
+    val description : error -> string
+  end
 
   (* typing judgments *)
   val okCl : ctx -> class -> unit
