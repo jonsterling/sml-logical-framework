@@ -59,8 +59,8 @@ struct
     type t = symbol
     val eq = 
       fn (C c1, C c2) => C.eq (c1, c2)
-      | (I i1, I i2) => Sym.eq (i1, i2)
-      | _ => false
+       | (I i1, I i2) => Sym.eq (i1, i2)
+       | _ => false
 
     val compare = 
       fn (C c1, C c2) => C.compare (c1, c2)

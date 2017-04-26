@@ -15,16 +15,16 @@ struct
   infix `@ \\
 
 
-  fun toStringCl (PI (psi, rcl)) = 
-    case psi of 
+  fun toStringCl (PI (Psi, rcl)) = 
+    case Psi of 
        [] => toStringRcl rcl
-     | _ => "{" ^ toStringCtx psi ^ "}" ^ toStringRcl rcl
+     | _ => "{" ^ toStringCtx Psi ^ "}" ^ toStringRcl rcl
 
-  and toStringCtx psi = 
-    case psi of
+  and toStringCtx Psi = 
+    case Psi of
        [] => "-"
      | (x, cl) :: [] => Sym.toString x ^ ":" ^ toStringCl cl
-     | (x, cl) :: psi' => Sym.toString x ^ ":" ^ toStringCl cl ^ ", " ^ toStringCtx psi'
+     | (x, cl) :: Psi' => Sym.toString x ^ ":" ^ toStringCl cl ^ ", " ^ toStringCtx Psi'
 
   and toStringRcl rcl = 
     case rcl of 
@@ -81,12 +81,12 @@ struct
   fun eqVar (rho1, rho2) (x1, x2) = 
     Sym.eq (lookupVar rho1 x1, lookupVar rho2 x2)
 
-  fun renCl rho (PI (psi, rcl)) =
+  fun renCl rho (PI (Psi, rcl)) =
     let
-      val (rho', psi') = renCtx rho psi
+      val (rho', Psi') = renCtx rho Psi
       val rcl' = renRcl rho' rcl
     in
-      PI (psi', rcl')
+      PI (Psi', rcl')
     end
   and renRcl rho = 
     fn TYPE => TYPE
@@ -96,22 +96,22 @@ struct
   and renSp rho = List.map (renNtm rho)
   and renNtm rho (xs \\ r) = 
     xs \\ renRtm (List.foldl (fn (x, rho) => Sym.Env.remove rho x) rho xs) r
-  and renCtx rho psi =
+  and renCtx rho Psi =
     let
-      fun go rho [] psi = (rho, psi)
-        | go rho ((x, cl) :: psi) psi' = go (Sym.Env.remove rho x) psi ((x, renCl rho cl) :: psi')
+      fun go rho [] Psi = (rho, Psi)
+        | go rho ((x, cl) :: Psi) Psi' = go (Sym.Env.remove rho x) Psi ((x, renCl rho cl) :: Psi')
 
-      val (rho', psi') = go rho psi []
+      val (rho', Psi') = go rho Psi []
     in
-      (rho', List.rev psi')
+      (rho', List.rev Psi')
     end
 
-  fun substCl rho (PI (psi, rcl)) =
-    PI (substCtx rho psi, substRcl rho rcl)
-  and substCtx rho psi =
-    case psi of 
+  fun substCl rho (PI (Psi, rcl)) =
+    PI (substCtx rho Psi, substRcl rho rcl)
+  and substCtx rho Psi =
+    case Psi of 
        [] => []
-     | (x, cl) :: psi' => (x, substCl rho cl) :: substCtx (Sym.Env.remove rho x) psi'
+     | (x, cl) :: Psi' => (x, substCl rho cl) :: substCtx (Sym.Env.remove rho x) Psi'
   and substRcl rho = 
     fn TYPE => TYPE
      | `r => ` (substRtm rho r)
@@ -132,20 +132,20 @@ struct
     xs \\ substRtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
   and substSp rho : spine -> spine = List.map (substNtm rho)
 
-  fun rebindCtx (xs, psi) = 
+  fun rebindCtx (xs, Psi) = 
     let
       fun go rho [] [] out = (rho, out)
-        | go rho (x :: xs) ((y, cl) :: psi) out =
-            go (Sym.Env.insert rho y x) xs psi ((x, renCl rho cl) :: out)
+        | go rho (x :: xs) ((y, cl) :: Psi) out =
+            go (Sym.Env.insert rho y x) xs Psi ((x, renCl rho cl) :: out)
         | go _ _ _ _ = raise Fail "Incorrect length of contexts"
-      val (rho', psi') = go Sym.Env.empty xs psi []
+      val (rho', Psi') = go Sym.Env.empty xs Psi []
     in
-      (rho', List.rev psi')
+      (rho', List.rev Psi')
     end
 
 
-  fun eqClAux env (PI (psi1, rcl1), PI (psi2, rcl2)) : bool =
-    case eqCtxAux env (psi1, psi2) of 
+  fun eqClAux env (PI (Psi1, rcl1), PI (Psi2, rcl2)) : bool =
+    case eqCtxAux env (Psi1, Psi2) of 
        SOME env' => eqRclAux env' (rcl1, rcl2) 
      | NONE => false
 
@@ -153,15 +153,15 @@ struct
     let
       exception CtxNotEq
       fun go env ([], []) = env
-        | go env ((x1, cl1) :: psi1, (x2, cl2) :: psi2) =
+        | go env ((x1, cl1) :: Psi1, (x2, cl2) :: Psi2) =
             if eqClAux env (cl1, cl2) then 
-              go (unifyVars env (x1, x2)) (psi1, psi2)
+              go (unifyVars env (x1, x2)) (Psi1, Psi2)
             else
               raise CtxNotEq
         | go _ _ = raise CtxNotEq
     in
-      fn psis =>
-        SOME (go env psis)
+      fn Psis =>
+        SOME (go env Psis)
         handle CtxNotEq => NONE
     end
 
@@ -195,12 +195,12 @@ struct
   val eqCl = eqClAux emptyEqEnv
   val eqCtx = Option.isSome o eqCtxAux emptyEqEnv
 
-  fun findVar gm (x : var) = 
+  fun findVar Gamma (x : var) = 
     let
       fun go [] = NONE 
-        | go ((y, cl) :: gm') = if Sym.eq (x, y) then SOME cl else go gm' 
+        | go ((y, cl) :: Gamma') = if Sym.eq (x, y) then SOME cl else go Gamma' 
     in
-      go (List.rev gm)
+      go (List.rev Gamma)
     end
 
   fun ensure b msg = 
@@ -209,46 +209,46 @@ struct
     else
       raise Fail msg
 
-  fun okCl gm (PI (psi, rcl)) =
+  fun okCl Gamma (PI (Psi, rcl)) =
     let
-      val _ = ctx gm psi
+      val _ = ctx Gamma Psi
     in
       case rcl of 
-         ` r => ensure (eqRcl (inf (gm @ psi) r, TYPE)) "Expected TYPE"
+         ` r => ensure (eqRcl (inf (Gamma @ Psi) r, TYPE)) "Expected TYPE"
        | TYPE => ()
     end
 
-  and chk gm (xs \\ r) (PI (psi, rcl)) =
+  and chk Gamma (xs \\ r) (PI (Psi, rcl)) =
     let
-      val (rho, psi') = rebindCtx (xs, psi)
+      val (rho, Psi') = rebindCtx (xs, Psi)
       val rcl' = renRcl rho rcl
     in
-      ensure (eqRcl (inf (gm @ psi') r, rcl')) "Error checking lambda"
+      ensure (eqRcl (inf (Gamma @ Psi') r, rcl')) "Error checking lambda"
     end
 
-  and inf gm (x `@ sp) : rclass =
-    case findVar gm x of 
-       SOME (PI (psi, rcl)) =>
-         (chkSp gm sp psi;
-          substRcl (envFromSpine (sp, List.map #1 psi)) rcl)
+  and inf Gamma (x `@ sp) : rclass =
+    case findVar Gamma x of 
+       SOME (PI (Psi, rcl)) =>
+         (chkSp Gamma sp Psi;
+          substRcl (envFromSpine (sp, List.map #1 Psi)) rcl)
      | NONE => raise Fail "Could not find variable"
 
-  and chkSp gm (sp : spine) psi : unit =
-    case (sp, psi) of 
+  and chkSp Gamma (sp : spine) Psi : unit =
+    case (sp, Psi) of
        ([], []) => ()
-     | (n :: sp', (x, cl) :: psi') =>
+     | (n :: sp', (x, cl) :: Psi') =>
          let
-           val rho = envFromSpine (sp', List.map #1 psi')
+           val rho = envFromSpine (sp', List.map #1 Psi')
          in
-           chk gm n (substCl rho cl);
-           chkSp gm sp' psi'
+           chk Gamma n (substCl rho cl);
+           chkSp Gamma sp' Psi'
          end
-     | _ => raise Fail ("chkSp length mismatch: " ^ toStringSp sp ^ " / " ^ toStringCtx psi)
+     | _ => raise Fail ("chkSp length mismatch: " ^ toStringSp sp ^ " / " ^ toStringCtx Psi)
 
-  and ctx gm psi = 
-    case ListUtil.unsnoc psi of 
+  and ctx Gamma Psi = 
+    case ListUtil.unsnoc Psi of 
        NONE => ()
-     | SOME (psi', (x, cl)) => 
-       (ctx gm psi';
-        okCl (gm @ psi') cl)
+     | SOME (Psi', (x, cl)) => 
+       (ctx Gamma Psi';
+        okCl (Gamma @ Psi') cl)
 end
