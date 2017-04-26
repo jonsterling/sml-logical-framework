@@ -4,7 +4,7 @@ struct
   open Syn
   infix `@ \\
 
-  fun findVar Gamma (x : var) = 
+  fun findVar Gamma x = 
     let
       fun go [] = NONE 
         | go ((y, cl) :: Gamma') = if Sym.eq (x, y) then SOME cl else go Gamma' 
@@ -35,14 +35,14 @@ struct
       ensure (Eq.rclass (inf (Gamma @ Psi') r, rcl')) "Error checking lambda"
     end
 
-  and inf Gamma (x `@ sp) : rclass =
+  and inf Gamma (x `@ sp) =
     case findVar Gamma x of 
        SOME (PI (Psi, rcl)) =>
          (chkSp Gamma sp Psi;
           Subst.rclass (Subst.zipSpine (List.map #1 Psi, sp)) rcl)
      | NONE => raise Fail ("Could not find variable " ^ Sym.toString x)
 
-  and chkSp Gamma (sp : spine) Psi : unit =
+  and chkSp Gamma sp Psi =
     case (sp, Psi) of
        ([], []) => ()
      | (n :: sp', (x, cl) :: Psi') =>

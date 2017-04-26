@@ -48,7 +48,7 @@ struct
     and spine rho = List.map (ntm rho)
     and ntm rho (xs \\ r) =
       xs \\ rtm (List.foldl (fn (x, rho) => Sym.Env.remove rho x) rho xs) r
-    and ctx rho (Psi : ctx) =
+    and ctx rho Psi =
       let
         fun go rho [] Psi = (rho, Psi)
           | go rho ((x, cl) :: Psi) Psi' = go (Sym.Env.remove rho x) Psi ((x, class rho cl) :: Psi')
@@ -85,7 +85,7 @@ struct
     fun var (rho1, rho2) (x1, x2) =
       Sym.eq (lookupVar rho1 x1, lookupVar rho2 x2)
 
-    fun classAux env (PI (Psi1, rcl1), PI (Psi2, rcl2)) : bool =
+    fun classAux env (PI (Psi1, rcl1), PI (Psi2, rcl2)) =
       case ctxAux env (Psi1, Psi2) of
          SOME env' => rclassAux env' (rcl1, rcl2)
        | NONE => false
@@ -142,11 +142,11 @@ struct
   struct
     type env = ntm Sym.Env.dict
 
-    fun zipSpine (xs : var list, sp : spine) =
+    fun zipSpine (xs, sp) =
       ListPair.foldr
         (fn (x, n, rho) => Sym.Env.insert rho x n)
         Sym.Env.empty
-        (xs, List.rev sp)
+        (xs, sp)
 
     fun class rho (PI (Psi, rcl)) =
       PI (ctx rho Psi, rclass rho rcl)
@@ -172,11 +172,17 @@ struct
       end
     and ntm rho (xs \\ r) =
       xs \\ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
-    and spine rho : spine -> spine = List.map (ntm rho)
+    and spine rho = List.map (ntm rho)
   end
 
   structure Print =
   struct
+    fun vars xs =
+      case xs of
+         [] => ""
+       | x :: [] => Sym.toString x
+       | x :: xs => Sym.toString x ^ "," ^ vars xs
+
     fun class (PI (Psi, rcl)) =
       case Psi of
          [] => rclass rcl
@@ -208,11 +214,5 @@ struct
       case xs of
          [] => rtm r
        | _ =>  "[" ^ vars xs ^ "]" ^ rtm r
-
-    and vars xs =
-      case xs of
-         [] => ""
-       | x :: [] => Sym.toString x
-       | x :: xs => Sym.toString x ^ "," ^ vars xs
   end
 end
