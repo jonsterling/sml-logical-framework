@@ -1,12 +1,13 @@
 Group is 
   lib/cmlib/cmlib.cm
   symbol.sig
-  symbol.fun
   list_util.sig
-  list_util.sml
   syntax.sig
+  typing.sig
+
+  list_util.sml
+  symbol.fun
   syntax.fun
-  
-  tiny_lf.sig
-  tiny_lf.sml
+  typing.fun
+
   example.sml

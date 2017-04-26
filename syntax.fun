@@ -1,7 +1,8 @@
-functor LfSyntax (Sym : SYMBOL) :> LF_SYNTAX where type Sym.symbol = Sym.symbol =
+functor LfSyntax (Sym : SYMBOL) :> LF_SYNTAX where type var = Sym.symbol where type 'a env = 'a Sym.Env.dict =
 struct
   structure Sym = Sym
   type var = Sym.symbol
+  type 'a env = 'a Sym.Env.dict
 
   (* atomic classifiers *)
   datatype rclass =
@@ -14,8 +15,6 @@ struct
 
   type spine = ntm list
   type ctx = (var * class) list
-  type env = ntm Sym.Env.dict
-  type ren = var Sym.Env.dict
 
   infix \ \\ `@
 
@@ -32,7 +31,7 @@ struct
 
   structure Ren =
   struct
-    type ren = var Sym.Env.dict
+    type ren = var env
 
     fun class rho (PI (Psi \ rcl)) =
       let
@@ -100,7 +99,7 @@ struct
 
   structure Eq =
   struct
-    type env = ren * ren
+    type env = var env * var env
     val emptyEqEnv = (Sym.Env.empty, Sym.Env.empty)
 
     val unifyBinders : env -> var list * var list -> env =
@@ -108,7 +107,7 @@ struct
         (fn (x1, x2, (rho1, rho2)) =>
            unifyVars (rho1, rho2) (x1, x2))
 
-    fun var (rho1, rho2) (x1, x2) =
+    fun varAux (rho1, rho2) (x1, x2) =
       Sym.eq (lookupVar rho1 x1, lookupVar rho2 x2)
 
     fun classAux env (PI (Psi1 \ rcl1), PI (Psi2 \ rcl2)) =
@@ -139,7 +138,7 @@ struct
        | _ => false
 
     and rtmAux env (x1 `@ sp1, x2 `@ sp2) =
-      var env (x1, x2)
+      varAux env (x1, x2)
         andalso spineAux env (sp1, sp2)
 
     and spineAux env (sp1, sp2) =
@@ -155,6 +154,7 @@ struct
         (unifyBinders env (xs1, xs2))
         (r1, r2)
 
+    val var = varAux emptyEqEnv
     val rclass = rclassAux emptyEqEnv
     val class = classAux emptyEqEnv
     val ntm  = ntmAux emptyEqEnv
@@ -166,7 +166,7 @@ struct
 
   structure Subst =
   struct
-    type env = ntm Sym.Env.dict
+    type subst = ntm env
 
     fun zipSpine (xs, sp) =
       ListPair.foldr
@@ -203,6 +203,9 @@ struct
 
   structure Print =
   struct
+    fun var x = 
+      Sym.toString x
+
     fun vars xs =
       case xs of
          [] => ""

@@ -27,7 +27,7 @@ struct
 
   structure Sym = SymbolWithConstants (Sg)
   structure Syn = LfSyntax (Sym)
-  structure TinyLf = TinyLf (Syn)
+  structure TinyLf = LfTyping (Syn)
 
   open TinyLf Sym
   infix `@ \\

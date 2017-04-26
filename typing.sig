@@ -1,6 +1,4 @@
-(* Jason Reed's Tiny LF, implementation by Jon Sterling *)
-
-signature TINY_LF =
+signature LF_TYPING = 
 sig
   include LF_SYNTAX
 
