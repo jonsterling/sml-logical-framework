@@ -5,10 +5,11 @@ struct
   struct
     datatype constant = 
        NAT  | ZE  | SU 
-     | LAM  | AP
+     | EXP | LAM  | AP
 
     val toString = 
       fn NAT => "nat"
+       | EXP => "exp"
        | ZE => "ze"
        | SU => "su"
        | LAM => "lam"
@@ -25,22 +26,24 @@ struct
   infix `@ \\
 
   val Nat = (Sym.C Sg.NAT `@ [])
+  val Exp = (Sym.C Sg.EXP `@ [])
   val Ze = Sym.C Sg.ZE `@ []
-  fun Su x = Sym.C Sg.SU `@ [[] \\ x]
+  fun Su e = Sym.C Sg.SU `@ [[] \\ e]
+  fun Lam (x, e) = Sym.C Sg.LAM `@ [[x] \\ e]
 
-  val ==> = PI
+  fun ==> (cls, rcl) = 
+    PI (List.map (fn cl => (Sym.new (), cl)) cls, rcl)
+
   infix ==>
 
-  val x = Sym.new ()
-
-  val sigNat : ctx = 
+  val mySig : ctx = 
     [(Sym.C Sg.NAT, [] ==> TYPE),
      (Sym.C Sg.ZE, [] ==> `Nat),
-     (Sym.C Sg.SU, [(x, [] ==> `Nat)] ==> ` Nat)]
-
-  val _ = ctx sigNat
+     (Sym.C Sg.SU, [[] ==> `Nat] ==> `Nat),
+     (Sym.C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> ` Exp)]
 
   val three = Su (Su (Su Ze))
-  val threeTy = inf sigNat three
-  val _ = print (toStringRtm three ^ " : " ^ toStringRcl threeTy)
+  val threeTy = inf mySig three
+  val _ = print (toStringCtx mySig ^ "\n")
+  val _ = print (toStringRtm three ^ " : " ^ toStringRcl threeTy ^ "\n")
 end
