@@ -1,4 +1,4 @@
-functor LfSyntax (Sym : SYMBOL) : LF_SYNTAX =
+functor LfSyntax (Sym : SYMBOL) :> LF_SYNTAX where type Sym.symbol = Sym.symbol =
 struct
   structure Sym = Sym
   type var = Sym.symbol
@@ -9,14 +9,15 @@ struct
    | TYPE
   and class = PI of (var * class) list * rclass
   and rtm = `@ of var * ntm list
-  and ntm = \\ of var list * rtm
+  and ntm_view = \ of var list * rtm
+  withtype ntm = ntm_view
 
   type spine = ntm list
   type ctx = (var * class) list
   type env = ntm Sym.Env.dict
   type ren = var Sym.Env.dict
 
-  infix \\ `@
+  infix \ \\ `@
 
   fun unifyVars (rho1, rho2) (x1, x2) =
     let
@@ -46,8 +47,8 @@ struct
     and rtm rho (x `@ sp)  =
       lookupVar rho x `@ spine rho sp
     and spine rho = List.map (ntm rho)
-    and ntm rho (xs \\ r) =
-      xs \\ rtm (List.foldl (fn (x, rho) => Sym.Env.remove rho x) rho xs) r
+    and ntm rho (xs \ r) =
+      xs \ rtm (List.foldl (fn (x, rho) => Sym.Env.remove rho x) rho xs) r
     and ctx rho Psi =
       let
         fun go rho [] Psi = (rho, Psi)
@@ -70,7 +71,25 @@ struct
       end
   end
 
+  fun xs \\ r = 
+    xs \ r
 
+  structure Bind = 
+  struct
+    fun ntm n = n
+  end
+
+  structure Unbind = 
+  struct
+    fun ntm (xs \ r) = 
+      let
+        val xs' = List.map (Sym.named o Sym.toString) xs
+        val rho = ListPair.foldr (fn (x, x', rho) => Sym.Env.insert rho x x') Sym.Env.empty (xs, xs')
+        val r' = Ren.rtm rho r
+      in
+        xs' \ r'
+      end
+  end
 
   structure Eq =
   struct
@@ -124,7 +143,7 @@ struct
              andalso spineAux env (sp1', sp2')
        | _ => false
 
-    and ntmAux env (xs1 \\ r1, xs2 \\ r2) =
+    and ntmAux env (xs1 \ r1, xs2 \ r2) =
       rtmAux
         (unifyBinders env (xs1, xs2))
         (r1, r2)
@@ -162,7 +181,7 @@ struct
         val sp' = spine rho sp
       in
         case Sym.Env.find rho x of
-          SOME (xs \\ r) =>
+          SOME (xs \ r) =>
             let
               val rho' = zipSpine (xs, sp')
             in
@@ -170,8 +189,8 @@ struct
             end
          | NONE => x `@ sp'
       end
-    and ntm rho (xs \\ r) =
-      xs \\ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
+    and ntm rho (xs \ r) =
+      xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
     and spine rho = List.map (ntm rho)
   end
 
@@ -210,7 +229,7 @@ struct
        | n :: [] => ntm n
        | n :: sp => ntm n ^ "," ^ spine sp
 
-    and ntm (xs \\ r) =
+    and ntm (xs \ r) =
       case xs of
          [] => rtm r
        | _ =>  "[" ^ vars xs ^ "]" ^ rtm r

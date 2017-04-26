@@ -1,8 +1,7 @@
-
 functor TinyLf (Syn : LF_SYNTAX) : TINY_LF = 
 struct
   open Syn
-  infix `@ \\
+  infix `@ \
 
   structure Exn = 
   struct
@@ -56,8 +55,9 @@ struct
        | TYPE => ()
     end
 
-  and chk Gamma (xs \\ r) (PI (Psi, rcl)) =
+  and chk Gamma n (PI (Psi, rcl)) =
     let
+      val xs \ r = Unbind.ntm n
       val (rho, Psi') = Ren.rebindCtx xs Psi
       val rcl' = Ren.rclass rho rcl
       val rcl'' = inf (Gamma @ Psi') r

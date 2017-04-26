@@ -3,22 +3,29 @@ sig
   structure Sym : SYMBOL
   type var = Sym.symbol
 
-  (* atomic classifiers *)
-  datatype rclass = 
-     ` of rtm 
-   | TYPE
+  type ntm (* normal terms *)
 
-  (* classifiers *)
-  and class = PI of (var * class) list * rclass
+  datatype rclass = ` of rtm  | TYPE (* atomic classifiers *)
+  and class = PI of (var * class) list * rclass (* general classifiers *)
+  and rtm = `@ of var * ntm list (* atomic terms *)
 
-  (* atomic terms *)
-  and rtm = `@ of var * ntm list
-
-  (* normal terms *)
-  and ntm = \\ of var list * rtm
+  datatype ntm_view = \ of var list * rtm (* normal term patterns *)
 
   type spine = ntm list
   type ctx = (var * class) list
+
+
+  val \\ : var list * rtm -> ntm 
+
+  structure Unbind :
+  sig
+    val ntm : ntm -> ntm_view
+  end
+
+  structure Bind : 
+  sig
+    val ntm : ntm_view -> ntm
+  end
 
   (* alpha equivalence *)
   structure Eq :
