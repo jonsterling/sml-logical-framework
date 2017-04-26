@@ -4,7 +4,7 @@ struct
     let
       val n = List.length xs - 1
       val x = List.nth (xs, n)
-      val xs' = List.drop (xs, n)
+      val xs' = List.take (xs, n)
     in
       SOME (xs', x)
     end

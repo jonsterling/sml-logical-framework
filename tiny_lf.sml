@@ -231,7 +231,7 @@ struct
        SOME (PI (Psi, rcl)) =>
          (chkSp Gamma sp Psi;
           substRcl (envFromSpine (sp, List.map #1 Psi)) rcl)
-     | NONE => raise Fail "Could not find variable"
+     | NONE => raise Fail ("Could not find variable " ^ Sym.toString x)
 
   and chkSp Gamma (sp : spine) Psi : unit =
     case (sp, Psi) of
