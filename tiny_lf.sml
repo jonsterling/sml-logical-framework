@@ -1,6 +1,4 @@
-structure Sym = Symbol ()
-
-structure TinyLf : TINY_LF =
+functor TinyLf (Sym : SYMBOL) : TINY_LF =
 struct
   type var = Sym.symbol
 
@@ -75,7 +73,7 @@ struct
       (xs, List.rev sp)
 
   fun eqVar (rho1, rho2) (x1, x2) = 
-    lookupVar rho1 x1 = lookupVar rho2 x2
+    Sym.eq (lookupVar rho1 x1, lookupVar rho2 x2)
 
   fun renCl rho (PI (psi, rcl)) =
     let
@@ -194,7 +192,7 @@ struct
   fun findVar gm (x : var) = 
     let
       fun go [] = NONE 
-        | go ((y, cl) :: gm') = if x = y then SOME cl else go gm' 
+        | go ((y, cl) :: gm') = if Sym.eq (x, y) then SOME cl else go gm' 
     in
       go (List.rev gm)
     end
