@@ -3,6 +3,7 @@ Group is
   symbol.sig
   list_util.sig
   syntax.sig
+  exn.sig
   typing.sig
 
   list_util.sml
