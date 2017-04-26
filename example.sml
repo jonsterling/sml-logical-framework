@@ -26,19 +26,20 @@ struct
   end
 
   structure Sym = SymbolWithConstants (Sg)
-  structure TinyLf = TinyLf (Sym)
+  structure Syn = LfSyntax (Sym)
+  structure TinyLf = TinyLf (Syn)
 
-  open TinyLf
+  open TinyLf Sym
   infix `@ \\
 
-  val Nat = Sym.C Sg.NAT `@ []
-  val Exp = Sym.C Sg.EXP `@ []
-  val Dim = Sym.C Sg.DIM `@ []
-  val I0 = Sym.C Sg.I0 `@ []
-  val I1 = Sym.C Sg.I1 `@ []
-  val Ze = Sym.C Sg.ZE `@ []
-  fun Su e = Sym.C Sg.SU `@ [[] \\ e]
-  fun Lam (x, e) = Sym.C Sg.LAM `@ [[x] \\ e]
+  val Nat = C Sg.NAT `@ []
+  val Exp = C Sg.EXP `@ []
+  val Dim = C Sg.DIM `@ []
+  val I0 = C Sg.I0 `@ []
+  val I1 = C Sg.I1 `@ []
+  val Ze = C Sg.ZE `@ []
+  fun Su e = C Sg.SU `@ [[] \\ e]
+  fun Lam (x, e) = C Sg.LAM `@ [[x] \\ e]
 
   fun ==> (cls, rcl) = 
     PI (List.map (fn cl => (Sym.new (), cl)) cls, rcl)
@@ -46,16 +47,16 @@ struct
   infix ==>
 
   val mySig : ctx = 
-    [(Sym.C Sg.NAT, [] ==> TYPE),
-     (Sym.C Sg.EXP, [] ==> TYPE),
-     (Sym.C Sg.ZE, [] ==> `Nat),
-     (Sym.C Sg.SU, [[] ==> `Nat] ==> `Nat),
-     (Sym.C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> `Exp),
-     (Sym.C Sg.DIM, [] ==> TYPE),
-     (Sym.C Sg.I0, [] ==> `Dim),
-     (Sym.C Sg.I1, [] ==> `Dim),
-     (Sym.C Sg.DIMABS, [[[] ==> `Dim] ==> `Exp] ==> `Exp),
-     (Sym.C Sg.DIMAP, [[] ==> `Exp, [] ==> `Dim] ==> `Exp)]
+    [(C Sg.NAT, [] ==> TYPE),
+     (C Sg.EXP, [] ==> TYPE),
+     (C Sg.ZE, [] ==> `Nat),
+     (C Sg.SU, [[] ==> `Nat] ==> `Nat),
+     (C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> `Exp),
+     (C Sg.DIM, [] ==> TYPE),
+     (C Sg.I0, [] ==> `Dim),
+     (C Sg.I1, [] ==> `Dim),
+     (C Sg.DIMABS, [[[] ==> `Dim] ==> `Exp] ==> `Exp),
+     (C Sg.DIMAP, [[] ==> `Exp, [] ==> `Dim] ==> `Exp)]
 
   val three = Su (Su (Su Ze))
   val threeTy = inf mySig three
