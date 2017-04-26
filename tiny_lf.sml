@@ -191,7 +191,7 @@ struct
   val eqCl = eqClAux emptyEqEnv
   val eqCtx = Option.isSome o eqCtxAux emptyEqEnv
 
-  fun findVar gm x = 
+  fun findVar gm (x : var) = 
     let
       fun go [] = NONE 
         | go ((y, cl) :: gm') = if x = y then SOME cl else go gm' 
