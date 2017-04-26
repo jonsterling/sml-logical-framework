@@ -29,7 +29,7 @@ sig
   val eqSp : spine * spine -> bool
   val eqCtx : ctx * ctx -> bool
 
-  (* pringint *)
+  (* printing *)
   val toStringRcl : rclass -> string
   val toStringCl : class -> string
   val toStringRtm : rtm -> string
