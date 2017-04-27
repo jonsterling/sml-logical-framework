@@ -85,7 +85,7 @@ struct
   struct
     fun ntm (xs \ r) = 
       let
-        val xs' = List.map (Sym.named o Sym.toString) xs
+        val xs' = List.map (Sym.named o Sym.name) xs
         val rho = ListPair.foldr (fn (x, x', rho) => Sym.Env.insert rho x x') Sym.Env.empty (xs, xs')
         val r' = Ren.rtm rho r
       in
