@@ -7,6 +7,7 @@ sig
   val new : unit -> symbol
   val named : string -> symbol 
   val toString : symbol -> string
+  val name : symbol -> string
 
   structure Env : DICT where type key = symbol
 end

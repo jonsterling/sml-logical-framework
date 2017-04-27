@@ -16,7 +16,9 @@ struct
     named "?"
 
   fun toString (a, i) = 
-    a
+    a ^ Int.toString i
+
+  fun name (a, i) = a
 
   structure Key =
   struct
@@ -53,6 +55,10 @@ struct
   val toString = 
     fn C c => C.toString c 
      | I i => Sym.toString i
+
+  val name = 
+    fn C c => C.toString c
+     | I i => Sym.name i
 
   structure Key = 
   struct

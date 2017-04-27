@@ -46,12 +46,7 @@ struct
      (C Sg.EXP, [] ==> TYPE),
      (C Sg.ZE, [] ==> `Nat),
      (C Sg.SU, [[] ==> `Nat] ==> `Nat),
-     (C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> `Exp),
-     (C Sg.DIM, [] ==> TYPE),
-     (C Sg.I0, [] ==> `Dim),
-     (C Sg.I1, [] ==> `Dim),
-     (C Sg.DIMABS, [[[] ==> `Dim] ==> `Exp] ==> `Exp),
-     (C Sg.DIMAP, [[] ==> `Exp, [] ==> `Dim] ==> `Exp)]
+     (C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> `Exp)]
 
   fun test () = 
     let
