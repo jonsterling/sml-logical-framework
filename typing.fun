@@ -57,17 +57,27 @@ struct
       go (List.rev Gamma)
     end
 
+  fun @@ (f, x) = f x
+  infix 0 @@ 
+
+  fun goal jdg = 
+    (Sym.new (), jdg)
+
   val step : stack -> stack = 
     fn (x, OK_CLASS (Gamma, cl)) :: stk => 
        let
          val Psi \ rcl = Unbind.class cl
-         val x1 = Sym.new ()
-         val x2 = Sym.new ()
-         val x3 = Sym.new ()
+         val ctxGoal = goal @@ CTX (Gamma, Psi)
        in
          case rcl of 
-            `r => (x1, CTX (Gamma, Psi)) :: (x2, INF (Gamma @ Psi, r)) :: (x3, EQ (` (x2 `@ []), TYPE)) :: stk
-          | TYPE => (x1, CTX (Gamma, Psi)) :: stk
+            `r => 
+            let
+              val infGoal = goal @@ INF (Gamma @ Psi, r)
+              val eqGoal = goal @@ EQ (` (#1 infGoal `@ []), TYPE)
+            in
+              ctxGoal :: infGoal :: eqGoal:: stk
+            end
+          | TYPE => ctxGoal :: stk
        end
      | (x, CHK (Gamma, n, cl)) :: stk =>
        let
@@ -75,10 +85,10 @@ struct
          val xs \ r = Unbind.ntm n
          val (rho, Psi') = Ren.rebindCtx xs Psi
          val rcl' = Ren.rclass rho rcl
-         val y1 = Sym.new ()
-         val y2 = Sym.new ()
+         val infGoal = goal @@ INF (Gamma @ Psi', r)
+         val eqGoal = goal @@ EQ (rcl', `(#1 infGoal `@ []))
        in
-         (y1, INF (Gamma @ Psi', r)) :: (y2, EQ (rcl', `(y1 `@ []))) :: stk
+         infGoal :: eqGoal :: stk
        end
      | (x, CHK_SP (Gamma, sp, Psi)) :: stk => 
         let
@@ -88,8 +98,9 @@ struct
                  let
                    val cl' = SubstN.class rho cl
                    val rho' = Sym.Env.insert rho x n
+                   val chkGoal = goal @@ CHK (Gamma, n, cl')
                  in
-                   ((Sym.new (), CHK (Gamma, n, cl')) :: stk, rho')
+                   (chkGoal :: stk, rho')
                  end)
               (stk, Sym.Env.empty)
               (sp, Psi)
@@ -102,9 +113,10 @@ struct
            let
              val Psi \ rcl = Unbind.class cl
              val rcl' = SubstN.rclass (SubstN.zipSpine (List.map #1 Psi, sp)) rcl
-             val x' = Sym.new ()
+             val chkGoal = goal @@ CHK_SP (Gamma, sp, Psi)
+             val retGoal = (x, RET rcl')
            in
-             (x', CHK_SP (Gamma, sp, Psi)) :: (x, RET rcl') :: stk
+             chkGoal :: retGoal :: stk
            end
          | NONE => (Sym.new (), ERR (LfExn.MISSING_VARIABLE {var = x, ctx = Gamma})) :: stk)
      | (x, CTX (Gamma, Psi)) :: stk =>
@@ -112,10 +124,10 @@ struct
            NONE => stk
          | SOME (Psi', (x, cl)) => 
            let
-             val y1 = Sym.new ()
-             val y2 = Sym.new ()
+             val ctxGoal = goal @@ CTX (Gamma, Psi')
+             val clGoal = goal @@ OK_CLASS (Gamma @ Psi', cl)
            in
-             (y1, CTX (Gamma, Psi')) :: (y2, OK_CLASS (Gamma @ Psi', cl)) :: stk
+             ctxGoal :: clGoal :: stk
            end)
      | (x, EQ (rcl1, rcl2)) :: stk =>
        if Eq.rclass (rcl1, rcl2) then 
