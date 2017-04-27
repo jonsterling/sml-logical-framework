@@ -23,7 +23,7 @@ struct
   structure Key =
   struct
     type t = symbol
-    fun eq ((_,i), (_, j)) = i = j
+    fun eq ((_,i : int), (_, j)) = i = j
     fun compare ((_,i), (_,j)) = Int.compare (i, j)
   end
 
