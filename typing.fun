@@ -33,8 +33,8 @@ struct
 
 
   type metavar = var
-  type frame = metavar * judgment
-  type stack = frame list
+  type goal = metavar * judgment
+  type stack = goal list
 
   fun substJudgment (rho : SubstRcl.subst) : judgment -> judgment = 
     fn OK_CLASS (Gamma, cl) => OK_CLASS (SubstRcl.ctx rho Gamma, SubstRcl.class rho cl)
@@ -60,7 +60,7 @@ struct
   fun @@ (f, x) = f x
   infix 0 @@ 
 
-  fun goal jdg = 
+  fun goal jdg =
     (Sym.new (), jdg)
 
   val step : stack -> stack = 
@@ -114,11 +114,12 @@ struct
              val Psi \ rcl = Unbind.class cl
              val rcl' = SubstN.rclass (SubstN.zipSpine (List.map #1 Psi, sp)) rcl
              val chkGoal = goal @@ CHK_SP (Gamma, sp, Psi)
-             val retGoal = (x, RET rcl')
+             val rho = Sym.Env.insert Sym.Env.empty x ([] \ rcl')
+             val stk' = List.map (fn (y, jdg) => (y, substJudgment rho jdg)) stk
            in
-             chkGoal :: retGoal :: stk
+             chkGoal :: stk'
            end
-         | NONE => (Sym.new (), ERR (LfExn.MISSING_VARIABLE {var = x, ctx = Gamma})) :: stk)
+         | NONE => goal (ERR (LfExn.MISSING_VARIABLE {var = x, ctx = Gamma})) :: stk)
      | (x, CTX (Gamma, Psi)) :: stk =>
        (case ListUtil.unsnoc Psi of 
            NONE => stk
@@ -132,21 +133,15 @@ struct
      | (x, EQ (rcl1, rcl2)) :: stk =>
        if Eq.rclass (rcl1, rcl2) then 
          stk 
-       else 
-         (Sym.new (), ERR (LfExn.EXPECTED_TYPE {expected = rcl2, actual = rcl1})) :: stk
-     | stk as [(_, RET rcl)] => stk
-     | (x, RET rcl) :: stk =>
-       let
-         val rho = Sym.Env.insert Sym.Env.empty x ([] \ rcl)
-       in
-         List.map (fn (y, jdg) => (y, substJudgment rho jdg)) stk
-       end
+       else
+         goal (ERR (LfExn.EXPECTED_TYPE {expected = rcl2, actual = rcl1})) :: stk
+     | stk as (_, RET rcl) :: _ => stk
      | stk as (_, ERR _) :: _ => stk
      | [] => []
 
   val isFinal = 
     fn [] => true 
-     | (_, RET _) :: [] => true
+     | (_, RET _) :: _ => true
      | (_, ERR _) :: _ => true
      | _ => false
 
@@ -157,32 +152,36 @@ struct
     else
       eval (step stk)
 
-
   fun okCl Gamma cl = 
-    case eval ([(Sym.new (), OK_CLASS (Gamma, cl))]) of 
+    case eval ([goal @@ OK_CLASS (Gamma, cl)]) of 
        (_, ERR err) :: _ => raise LfExn.LfExn err
      | _ => ()
 
   fun ctx Gamma Psi = 
-    case eval ([(Sym.new (), CTX (Gamma, Psi))]) of 
+    case eval ([goal @@ CTX (Gamma, Psi)]) of 
        (_, ERR err) :: _ => raise LfExn.LfExn err
      | _ => ()
 
   fun chk Gamma n cl = 
-    case eval ([(Sym.new (), CHK (Gamma, n, cl))]) of 
+    case eval ([goal @@ CHK (Gamma, n, cl)]) of 
        (_, ERR err) :: _ => raise LfExn.LfExn err
      | _ => ()
 
   fun chkSp Gamma sp Psi = 
-    case eval ([(Sym.new (), CHK_SP (Gamma, sp, Psi))]) of 
+    case eval ([goal @@ CHK_SP (Gamma, sp, Psi)]) of 
        (_, ERR err) :: _ => raise LfExn.LfExn err
      | _ => ()
   
   fun inf Gamma r = 
-    case eval ([(Sym.new (), INF (Gamma, r))]) of 
-       (_, ERR err) :: _ => raise LfExn.LfExn err
-     | [(_, RET rcl)] => rcl
-     | _ => raise Fail "Internal error"
+    let
+      val infGoal = goal @@ INF (Gamma, r)
+      val retGoal = goal @@ RET (` (#1 infGoal `@ []))
+    in
+      case eval [infGoal, retGoal] of 
+         (_, ERR err) :: _ => raise LfExn.LfExn err
+       | [(_, RET rcl)] => rcl
+       | _ => raise Fail "Internal error"
+    end
 
   structure LfExn = LfExnUtil (LfExn)
 end
