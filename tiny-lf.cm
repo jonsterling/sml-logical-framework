@@ -1,0 +1,22 @@
+Library
+  signature LF_SYMBOL
+  signature LF_SYMBOL_WITH_CONSTANTS
+  signature LF_SYMBOL_CONSTANT
+  signature LF_EXN
+  signature LF_SYNTAX
+  signature LF_TYPING
+  functor LfSymbol
+  functor LfSymbolWithConstants
+is
+  lib/cmlib/cmlib.cm
+  src/symbol.sig
+  src/list_util.sig
+  src/syntax.sig
+  src/exn.sig
+  src/typing.sig
+
+  src/list_util.sml
+  src/exn.fun
+  src/symbol.fun
+  src/syntax.fun
+  src/typing.fun

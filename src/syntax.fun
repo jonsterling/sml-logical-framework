@@ -1,4 +1,4 @@
-functor LfSyntax (Sym : SYMBOL) :> LF_SYNTAX where type Sym.symbol = Sym.symbol where type 'a Sym.Env.dict = 'a Sym.Env.dict =
+functor LfSyntax (Sym : LF_SYMBOL) :> LF_SYNTAX where type Sym.symbol = Sym.symbol where type 'a Sym.Env.dict = 'a Sym.Env.dict =
 struct
   structure Sym = Sym
   structure Env = Sym.Env

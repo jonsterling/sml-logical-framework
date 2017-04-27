@@ -1,4 +1,4 @@
-functor Symbol () :> SYMBOL = 
+functor LfSymbol () :> LF_SYMBOL = 
 struct
   type symbol = string * int
 
@@ -31,7 +31,7 @@ struct
   structure Env = SplayDict (structure Key = Key)
 end
 
-signature SYMBOL_CONSTANT =
+signature LF_SYMBOL_CONSTANT =
 sig
   type constant
   val eq : constant * constant -> bool
@@ -39,9 +39,9 @@ sig
   val toString : constant -> string
 end
 
-functor SymbolWithConstants(C : SYMBOL_CONSTANT) : SYMBOL_WITH_CONSTANTS where type constant = C.constant = 
+functor LfSymbolWithConstants(C : LF_SYMBOL_CONSTANT) : LF_SYMBOL_WITH_CONSTANTS where type constant = C.constant = 
 struct
-  structure Sym = Symbol ()
+  structure Sym = LfSymbol ()
   type constant = C.constant
   type identifier = Sym.symbol
 

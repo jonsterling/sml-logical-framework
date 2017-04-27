@@ -1,4 +1,4 @@
-signature SYMBOL = 
+signature LF_SYMBOL = 
 sig
   type symbol
   val eq : symbol * symbol -> bool
@@ -12,7 +12,7 @@ sig
   structure Env : DICT where type key = symbol
 end
 
-signature SYMBOL_WITH_CONSTANTS = 
+signature LF_SYMBOL_WITH_CONSTANTS = 
 sig
   type identifier
   type constant
@@ -21,5 +21,5 @@ sig
      C of constant 
    | I of identifier
   
-  include SYMBOL where type symbol = ext_symbol
+  include LF_SYMBOL where type symbol = ext_symbol
 end

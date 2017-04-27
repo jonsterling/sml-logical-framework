@@ -1,6 +1,6 @@
 signature LF_SYNTAX = 
 sig
-  structure Sym : SYMBOL
+  structure Sym : LF_SYMBOL
   type var = Sym.symbol
   type 'a env = 'a Sym.Env.dict
 

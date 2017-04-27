@@ -25,7 +25,7 @@ struct
     fun compare (o1, o2) = String.compare (toString o1, toString o2)
   end
 
-  structure Sym = SymbolWithConstants (Sg)
+  structure Sym = LfSymbolWithConstants (Sg)
   structure Syn = LfSyntax (Sym)
   structure TinyLf = LfTyping (Syn)
 

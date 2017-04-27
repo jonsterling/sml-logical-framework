@@ -1,15 +1,15 @@
 Group is 
   lib/cmlib/cmlib.cm
-  symbol.sig
-  list_util.sig
-  syntax.sig
-  exn.sig
-  typing.sig
+  src/symbol.sig
+  src/list_util.sig
+  src/syntax.sig
+  src/exn.sig
+  src/typing.sig
 
-  list_util.sml
-  exn.fun
-  symbol.fun
-  syntax.fun
-  typing.fun
+  src/list_util.sml
+  src/exn.fun
+  src/symbol.fun
+  src/syntax.fun
+  src/typing.fun
 
-  example.sml
+  test/example.sml
