@@ -1,6 +1,8 @@
-functor LfSyntax (Sym : SYMBOL) :> LF_SYNTAX where type var = Sym.symbol where type 'a env = 'a Sym.Env.dict =
+functor LfSyntax (Sym : SYMBOL) :> LF_SYNTAX where type Sym.symbol = Sym.symbol where type 'a Sym.Env.dict = 'a Sym.Env.dict =
 struct
   structure Sym = Sym
+  structure Env = Sym.Env
+
   type var = Sym.symbol
   type 'a env = 'a Sym.Env.dict
 
@@ -167,10 +169,8 @@ struct
   end
 
 
-  structure Subst =
+  structure SubstN =
   struct
-    type subst = ntm env
-
     fun zipSpine (xs, sp) =
       ListPair.foldr
         (fn (x, n, rho) => Sym.Env.insert rho x n)
@@ -191,13 +191,45 @@ struct
         val sp' = spine rho sp
       in
         case Sym.Env.find rho x of
-          SOME (xs \ r) =>
-            let
-              val rho' = zipSpine (xs, sp')
-            in
-              rtm rho' r
-            end
+           SOME (xs \ r) => rtm (zipSpine (xs, sp')) r
          | NONE => x `@ sp'
+      end
+    and ntm rho (xs \ r) =
+      xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
+    and spine rho = List.map (ntm rho)
+  end
+
+  structure SubstRcl =
+  struct
+    type subst = (var, rclass) binder env
+    fun zipSpine (xs, sp) =
+      ListPair.foldr
+        (fn (x, n, rho) => Sym.Env.insert rho x n)
+        Sym.Env.empty
+        (xs, sp)
+
+    fun class rho (PI (Psi \ rcl)) =
+      PI (ctx rho Psi \ rclass rho rcl)
+    and ctx rho Psi =
+      case Psi of
+         [] => []
+       | (x, cl) :: Psi' => (x, class rho cl) :: ctx (Sym.Env.remove rho x) Psi'
+    and rclass rho =
+      fn TYPE => TYPE
+       | `(x `@ sp) => 
+         let
+           val sp' = spine rho sp
+         in
+           case Sym.Env.find rho x of 
+              SOME (xs \ rcl) => SubstN.rclass (zipSpine (xs, sp')) rcl
+            | NONE => `(x `@ sp')
+         end
+    and rtm rho (x `@ sp) =
+      let
+        val sp' = spine rho sp
+      in 
+        (* Is this correct? *)
+        (x `@ sp')
       end
     and ntm rho (xs \ r) =
       xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r

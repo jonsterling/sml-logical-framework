@@ -1,7 +1,8 @@
 signature LF_SYNTAX = 
 sig
-  type var
-  type 'a env
+  structure Sym : SYMBOL
+  type var = Sym.symbol
+  type 'a env = 'a Sym.Env.dict
 
   type ntm (* normal terms *)
   type spine = ntm list
@@ -36,7 +37,7 @@ sig
   end
 
   (* capture-avoiding renaming *)
-  structure Ren : 
+  structure Ren :
   sig
     type ren = var env
     val rclass : ren -> rclass -> rclass
@@ -50,17 +51,27 @@ sig
   end
 
   (* capture-avoiding substitution *)
-  structure Subst : 
+  structure SubstN : 
   sig
-    type subst = ntm env
+    val rclass : ntm env -> rclass -> rclass
+    val class : ntm env -> class -> class
+    val rtm : ntm env -> rtm -> rtm
+    val ntm : ntm env -> ntm -> ntm
+    val spine : ntm env -> spine -> spine 
+    val ctx : ntm env -> ctx -> ctx
+
+    val zipSpine : var list * spine -> ntm env
+  end
+
+  structure SubstRcl :
+  sig
+    type subst = (var, rclass) binder env
     val rclass : subst -> rclass -> rclass
     val class : subst -> class -> class
     val rtm : subst -> rtm -> rtm
     val ntm : subst -> ntm -> ntm
     val spine : subst -> spine -> spine 
     val ctx : subst -> ctx -> ctx
-
-    val zipSpine : var list * spine -> subst
   end
 
   structure Print : 
