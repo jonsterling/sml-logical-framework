@@ -4,6 +4,9 @@ struct
   fun debug e = 
     e ()
     handle LfExn err => 
-      (print ("\n" ^ description err ^ "\n");
-       raise LfExn err)
+       (print ("\n" ^ description err ^ "\n");
+        raise LfExn err)
+     | exn => 
+       (print ("\n" ^ exnMessage exn ^ "\n");
+       raise exn)
 end
