@@ -46,15 +46,12 @@ struct
      | RET rcl => RET (SubstRcl.rclass rho rcl)
      | ERR err => ERR err
 
-  fun substStack rho : stack -> stack =
-    List.map (fn (x, jdg) => (x, substJudgment rho jdg))
-
   datatype 'a cfg = <: of 'a * stack
   infix <:
 
   fun findVar Gamma x = 
     let
-      fun go [] = NONE 
+      fun go [] = NONE
         | go ((y, cl) :: Gamma') = if Eq.var (x, y) then SOME cl else go Gamma' 
     in
       go (List.rev Gamma)

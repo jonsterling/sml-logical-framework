@@ -202,11 +202,6 @@ struct
   structure SubstRcl =
   struct
     type subst = (var, rclass) binder env
-    fun zipSpine (xs, sp) =
-      ListPair.foldr
-        (fn (x, n, rho) => Sym.Env.insert rho x n)
-        Sym.Env.empty
-        (xs, sp)
 
     fun class rho (PI (Psi \ rcl)) =
       PI (ctx rho Psi \ rclass rho rcl)
@@ -221,7 +216,7 @@ struct
            val sp' = spine rho sp
          in
            case Sym.Env.find rho x of 
-              SOME (xs \ rcl) => SubstN.rclass (zipSpine (xs, sp')) rcl
+              SOME (xs \ rcl) => SubstN.rclass (SubstN.zipSpine (xs, sp')) rcl
             | NONE => `(x `@ sp')
          end
     and rtm rho (x `@ sp) =
