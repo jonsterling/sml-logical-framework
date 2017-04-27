@@ -30,7 +30,7 @@ struct
   structure TinyLf = LfTyping (Syn)
 
   open TinyLf Sym
-  infix `@ \\
+  infix `@ \\ --> ==>
 
   val Nat = C Sg.NAT `@ []
   val Exp = C Sg.EXP `@ []
@@ -40,11 +40,6 @@ struct
   val Ze = C Sg.ZE `@ []
   fun Su e = C Sg.SU `@ [[] \\ e]
   fun Lam (x, e) = C Sg.LAM `@ [[x] \\ e]
-
-  fun ==> (cls, rcl) =
-    pi (List.map (fn cl => (Sym.new (), cl)) cls, rcl)
-
-  infix ==>
 
   val mySig : ctx = 
     [(C Sg.NAT, [] ==> TYPE),

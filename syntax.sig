@@ -14,7 +14,8 @@ sig
   datatype ('a, 'b) binder = \ of 'a list * 'b
 
   val \\ : var list * rtm -> ntm
-  val pi : (var * class) list * rclass -> class
+  val --> : ctx * rclass -> class
+  val ==> : class list * rclass -> class
 
   structure Unbind :
   sig

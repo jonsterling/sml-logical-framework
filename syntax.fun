@@ -16,7 +16,7 @@ struct
   type spine = ntm list
   type ctx = (var * class) list
 
-  infix \ \\ `@
+  infix \ \\ `@ --> ==>
 
   fun unifyVars (rho1, rho2) (x1, x2) =
     let
@@ -73,8 +73,11 @@ struct
   fun xs \\ r = 
     xs \ r
 
-  fun pi (psi, rcl) = 
-    PI (psi \ rcl)
+  fun Psi --> rcl = 
+    PI (Psi \ rcl)
+
+  fun cls ==> cl = 
+    List.map (fn x => (Sym.new (), x)) cls --> cl
 
   structure Unbind = 
   struct
