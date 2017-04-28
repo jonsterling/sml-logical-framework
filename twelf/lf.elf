@@ -1,10 +1,8 @@
 sort : type.
 tm : sort -> type.
 
-* : sort -> sort -> sort.
 => : sort -> sort -> sort.
 %infix right 6 =>.
-%infix right 6 *.
 
 abs : (tm S -> tm T) -> tm (S => T).
 
