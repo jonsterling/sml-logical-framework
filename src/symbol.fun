@@ -50,8 +50,11 @@ struct
    | I of identifier
 
   type symbol = ext_symbol
+
   val new = I o Sym.new
+  
   val named = I o Sym.named
+
   val toString = 
     fn C c => C.toString c 
      | I i => Sym.toString i
