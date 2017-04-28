@@ -6,9 +6,9 @@ struct
   infix `@ \ \\ @@
 
   datatype error = 
-      EXPECTED_TYPE of {expected : rclass, actual : rclass}
-    | MISSING_VARIABLE of {var : var, ctx : ctx}
-    | SPINE_MISMATCH of {spine : spine, ctx : ctx}
+     EXPECTED_TYPE of {expected : rclass, actual : rclass}
+   | MISSING_VARIABLE of {var : var, ctx : ctx}
+   | SPINE_MISMATCH of {spine : spine, ctx : ctx}
 
   (* The typechecker is organized as a machine using a variation on the Dependent LCF
      architecture, as described in Sterling/Harper 2017, but applied to a deterministic
