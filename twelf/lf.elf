@@ -1,0 +1,47 @@
+sort : type.
+el : sort -> type.
+
+=> : sort -> sort -> sort.
+%infix right 6 =>.
+exp : sort.
+
+m/abs : (el S -> el T) -> el (S => T).
+m/ap : el (S => T) -> el S -> el T.
+
+
+tt : el exp.
+ff : el exp.
+pair : el exp -> el exp -> el exp.
+lam : el (exp => exp) -> el exp.
+ap : el exp -> el exp -> el exp.
+
+
+
+ty : type.
+bool : ty.
+prod : ty -> ty -> ty.
+arr : ty -> ty -> ty.
+
+jdg : sort -> type.
+pi : {J : jdg S} (el S -> jdg T) -> jdg (S => T).
+
+~> : jdg S -> el S -> type.
+%infix right 8 ~>.
+%mode ~> +J -E.
+
+~>/pi : pi J1 J2 ~> m/abs F
+         <- {x} J1 ~> x -> (J2 x) ~> (F x).
+
+
+inh : ty -> jdg exp.
+
+bool/tt : inh bool ~> tt.
+bool/ff : inh bool ~> ff.
+prod/pair : inh (prod A B) ~> pair M N
+             <- inh B ~> N
+             <- inh A ~> M.
+arr/lam : inh (arr A B) ~> lam F
+           <- (pi (inh A) [_] inh B) ~> F.
+
+
+%solve test : inh (arr bool bool) ~> _.
