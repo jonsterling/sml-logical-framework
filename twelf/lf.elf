@@ -31,7 +31,7 @@ jdg : sort -> type.
 % We provide basic "structural" rules for proofs.
 ~>/>>
    : J1 >> J2 ~> abs F
-      <- {x} J1 ~> x -> x <~ J1 -> (J2 x) ~> (F x).
+      <- {x} (J1 ~> x) -> (x <~ J1) -> J2 x ~> F x.
 
 
 % a basic lambda calculus.
@@ -56,6 +56,15 @@ ty : tm exp -> jdg triv.
 eq : tm exp -> tm exp -> tm exp -> jdg triv.
 inh : tm exp -> jdg exp.
 syn : tm exp -> jdg exp.
+dfun-dom : tm exp -> jdg exp.
+dfun-cod : tm exp -> jdg (exp => exp).
+
+dfun-dom/unify
+  : dfun-dom (dfun A _) ~> A.
+
+dfun-cod/unify
+  : dfun-cod (dfun _ B) ~> B.
+
 
 ty/bool
    : ty bool ~> *.
@@ -108,7 +117,9 @@ syn/hyp
 
 syn/ap
   : syn (ap R M) ~> B M
-     <- syn R ~> dfun A (abs B)
+     <- syn R ~> T
+     <- dfun-dom T ~> A
+     <- dfun-cod T ~> abs B
      <- eq A M M ~> _.
 
 
