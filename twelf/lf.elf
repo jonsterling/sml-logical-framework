@@ -18,10 +18,20 @@ jdg : sort -> type.
 %infix right 8 ~>.
 %mode ~> +J -E.
 
+% [E <~ J] means that [E] is evidence, namely of [J].
+<~ : tm S -> jdg S -> type.
+%infix left 8 <~.
+%mode <~ +E -J.
+
+% The difference between [J ~> E] and [E <~ J] is *mode*.
+% When hypothesizing a judgment [J], as below, we add both [J ~> x]
+% and [x <~ J] to the context so that we can "remember" what [x] 
+% was hypothesized to prove in a well-moded way.
+
 % We provide basic "structural" rules for proofs.
 ~>/>>
    : J1 >> J2 ~> abs F
-      <- {x} J1 ~> x -> (J2 x) ~> (F x).
+      <- {x} J1 ~> x -> x <~ J1 -> (J2 x) ~> (F x).
 
 
 % a basic lambda calculus.
@@ -45,8 +55,7 @@ dpair : tm exp -> tm (exp => exp) -> tm exp.
 ty : tm exp -> jdg triv.
 eq : tm exp -> tm exp -> tm exp -> jdg triv.
 inh : tm exp -> jdg exp.
-
-% Below, we write down the PRL rules in Twelf notation.
+syn : tm exp -> jdg exp.
 
 ty/bool
    : ty bool ~> *.
@@ -89,8 +98,21 @@ eq/lam
    : eq (dfun A (abs B)) (lam (abs F1)) (lam (abs F2)) ~> *
       <- inh A >> ([x] eq (B x) (F1 x) (F2 x)) ~> _.
 
-%solve test : inh (dfun bool (abs [x] dfun bool (abs [y] bool))) ~> _.
+eq/syn
+   : eq A M M ~> *
+      <- syn M ~> A.
 
+syn/hyp 
+   : syn R ~> A
+      <- R <~ inh A.
+
+syn/ap
+  : syn (ap R M) ~> B M
+     <- syn R ~> dfun A (abs B)
+     <- eq A M M ~> _.
+
+
+%solve test : inh (dfun bool (abs [x] dfun bool (abs [y] bool))) ~> _.
 
 % Now we can prove a metatheorem for our refinement logic: if a expression is inhabited, then it is
 % a type.
@@ -100,7 +122,7 @@ inh=>ty : inh A ~> E -> ty A ~> * -> type.
 
 %block inh=>ty-hyp 
    : some {A:tm exp} {A/ty : ty A ~> *}
-      block {x:tm exp} {x/inh : inh A ~> x} {ih : inh=>ty x/inh A/ty}.
+      block {x:tm exp} {x/inh : inh A ~> x} {x/rem : x <~ inh A} {ih : inh=>ty x/inh A/ty}.
 
 
 - : inh=>ty inh/tt ty/bool.
@@ -112,8 +134,8 @@ inh=>ty : inh A ~> E -> ty A ~> * -> type.
 - : inh=>ty
      (inh/lam (~>/>> B/inh) A/ty)
      (ty/dfun (~>/>> B/ty) A/ty)
-     <- {x} {x/inh} inh=>ty x/inh A/ty 
-        -> inh=>ty (B/inh x x/inh) (B/ty x x/inh).
+     <- {x} {x/inh} {x/rem} inh=>ty x/inh A/ty 
+        -> inh=>ty (B/inh x x/inh x/rem) (B/ty x x/inh x/rem).
 
 %worlds (inh=>ty-hyp) (inh=>ty _ _).
 %total I (inh=>ty I _).
