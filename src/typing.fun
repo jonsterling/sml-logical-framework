@@ -10,6 +10,12 @@ struct
     | MISSING_VARIABLE of {var : var, ctx : ctx}
     | SPINE_MISMATCH of {spine : spine, ctx : ctx}
 
+  (* The typechecker is organized as a machine using a variation on the Dependent LCF
+     architecture, as described in Sterling/Harper 2017, but applied to a deterministic
+     and syntax-directed logic. In this special case, there is only one primitive rule, 
+     which can be thought of as a *local* version of the transition function for a 
+     type-checking machine. *)
+
   datatype judgment = 
      OK_CLASS of ctx * class
    | CHK of ctx * ntm * class
@@ -18,6 +24,8 @@ struct
    | CTX of ctx * ctx
    | EQ of rclass * rclass
 
+  (* Our machine has three instructions: we can push a judgment onto the stack,
+     we can throw an error (aborting the process), or we can return. *)
   datatype 'a instr = 
      PUSH of judgment
    | THROW of error
@@ -34,7 +42,6 @@ struct
   type synthesis = rclass option
   datatype 'a refine = |> of (metavar * 'a instr) list * synthesis
   infix |>
-
 
   val printError : error -> string = 
     fn EXPECTED_TYPE {expected, actual} =>
@@ -79,6 +86,7 @@ struct
       go (List.rev Gamma)
     end
 
+  (* The single primitive refinement rule for the Logical Framework. *)
   val refine : judgment -> judgment refine = 
     fn OK_CLASS (Gamma, cl) =>
        let
@@ -153,29 +161,35 @@ struct
        else
          [throw (EXPECTED_TYPE {expected = rcl2, actual = rcl1})] |> NONE
 
-  fun propagate (x : metavar) (synth : synthesis) (stk : stack) = 
-    case synth of 
-       SOME rcl =>
-       let
-         val rho = Sym.Env.insert Sym.Env.empty x ([] \ rcl)
-       in
-         List.map (fn (y, hist, instr) => (y, hist, substInstr rho instr)) stk
-       end
-     | NONE => stk
+  (* Next, we define the transition function for the machine; this can be thought of as a 
+     strategy for deriving judgments in LF using the refinement rule that we have written 
+     above. This hand-written strategy corresponds to "[refine, id...]" in Dependent LCF,
+     the tactic that runs a rule on the *first subgoal*. *)
+  local
+    fun propagate (x : metavar) (synth : synthesis) (stk : stack) = 
+      case synth of 
+        SOME rcl =>
+        let
+          val rho = Sym.Env.insert Sym.Env.empty x ([] \ rcl)
+        in
+          List.map (fn (y, hist, instr) => (y, hist, substInstr rho instr)) stk
+        end
+      | NONE => stk
+  in
+    val step : stack -> stack option = 
+      fn (x, hist, PUSH jdg) :: stk => 
+        let
+          val subgoals |> synthesis = refine jdg
+          val subgoals' = List.map (fn (y, instr) => (y, jdg :: hist, instr)) subgoals
+        in
+          SOME (subgoals' @ propagate x synthesis stk)
+        end
+      | (_, _, THROW _) :: _ => NONE
+      | (_, _, RET _) :: _ => NONE
+      | [] => NONE
+  end
 
-  val step : stack -> stack option = 
-    fn (x, hist, PUSH jdg) :: stk => 
-       let
-         val subgoals |> synthesis = refine jdg
-         val subgoals' = List.map (fn (y, instr) => (y, jdg :: hist, instr)) subgoals
-       in
-         SOME (subgoals' @ propagate x synthesis stk)
-       end
-     | (_, _, THROW _) :: _ => NONE
-     | [(_, _, RET _)] => NONE
-     | (_, _, RET _) :: _ => raise Fail "Internal error"
-     | [] => NONE
-
+  (* Finally, we define a routine to run our machine into quiescence. *)
   fun eval stk = 
     case step stk of 
        NONE => stk
@@ -222,8 +236,8 @@ struct
     in
       case eval [infGoal, retGoal] of 
          (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
-       | [(_, _, RET rcl)] => rcl
-       | _ => raise Fail "Internal error"
+       | (_, _, RET rcl) :: _ => rcl
+       | [] => raise Fail "Internal error"
     end
 
   structure LfExn = LfExnUtil (LfExn)
