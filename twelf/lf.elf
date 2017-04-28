@@ -45,7 +45,10 @@ dpair : tm exp -> tm (exp => exp) -> tm exp.
 % Now we define two basic refinement judgments: that some term is a type, and that
 % some term is an inhabited type.
 ty : tm exp -> jdg triv.
+eq : tm exp -> tm exp -> tm exp -> jdg triv.
 inh : tm exp -> jdg exp.
+
+% Below, we write down the PRL rules in Twelf notation.
 
 ty/bool
    : ty bool ~> *.
@@ -69,11 +72,24 @@ inh/pair
       <- inh A ~> M
       <- inh (B M) ~> N.
 
-
 inh/lam
    : inh (dfun A (abs B)) ~> lam F
       <- ty A ~> _
       <- inh A >> ([x] inh (B x)) ~> F.
+
+
+eq/tt
+   : eq bool tt tt ~> *.
+eq/ff
+   : eq bool ff ff ~> *.
+eq/pair
+   : eq (dpair A (abs B)) (pair M1 N1) (pair M2 N2) ~> *
+      <- (inh A >> [x] ty (B x)) ~> _
+      <- eq A M1 M2 ~> _
+      <- eq (B M1) N1 N2 ~> _.
+eq/lam
+   : eq (dfun A (abs B)) (lam (abs F1)) (lam (abs F2)) ~> *
+      <- inh A >> ([x] eq (B x) (F1 x) (F2 x)) ~> _.
 
 %solve test : inh (dfun bool (abs [x] dfun bool (abs [y] bool))) ~> _.
 
@@ -84,7 +100,7 @@ inh/lam
 inh=>ty : inh A ~> E -> ty A ~> * -> type.
 %mode inh=>ty +I -T.
 
-%block inh-hyp 
+%block inh=>ty-hyp 
    : some {A:tm exp} {A/ty : ty A ~> *}
       block {x:tm exp} {x/inh : inh A ~> x} {ih : inh=>ty x/inh A/ty}.
 
@@ -101,5 +117,6 @@ inh=>ty : inh A ~> E -> ty A ~> * -> type.
      <- {x} {x/inh} inh=>ty x/inh A/ty 
         -> inh=>ty (B/inh x x/inh) (B/ty x x/inh).
 
-%worlds (inh-hyp) (inh=>ty _ _).
+%worlds (inh=>ty-hyp) (inh=>ty _ _).
 %total I (inh=>ty I _).
+
