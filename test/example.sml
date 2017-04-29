@@ -54,6 +54,7 @@ struct
       val threeTy = inf mySig three
       val welp = ctx [] mySig
       val x = Sym.named "x"
+      val _ = inf mySig (Lam (x, x `@ []))
       val _ = print (Print.rtm (Lam (x, x `@ [])) ^ "\n")
       val _ = print (Print.ctx mySig ^ "\n")
       val _ = print (Print.rtm three ^ " : " ^ Print.rclass threeTy ^ "\n")
