@@ -20,8 +20,12 @@ jdg : sort -> type.
 
 % [E <~ J] means that [E] is evidence, namely of [J].
 <~ : tm S -> jdg S -> type.
-%infix left 8 <~.
-%mode <~ +E -J.
+%infix left 5 <~.
+%mode <~ +E -J1.
+
+fam-unapply : jdg T -> tm S -> (tm S -> jdg T) -> type.
+%mode fam-unapply +JT -E -Fam.
+
 
 % The difference between [J ~> E] and [E <~ J] is *mode*.
 % When hypothesizing a judgment [J], as below, we add both [J ~> x]
@@ -29,9 +33,13 @@ jdg : sort -> type.
 % was hypothesized to prove in a well-moded way.
 
 % We provide basic "structural" rules for proofs.
-~>/>>
+>>/i
    : J1 >> J2 ~> abs F
-      <- {x} (J1 ~> x) -> (x <~ J1) -> J2 x ~> F x.
+      <- {x} 
+         (J1 ~> x) 
+         -> (x <~ J1)
+         -> fam-unapply (J2 x) x J2
+         -> J2 x ~> F x.
 
 
 % a basic lambda calculus.
@@ -48,11 +56,12 @@ lam : tm (exp => exp) -> tm exp.
 ap : tm exp -> tm exp -> tm exp.
 dfun : tm exp -> tm (exp => exp) -> tm exp.
 dpair : tm exp -> tm (exp => exp) -> tm exp.
-
+fst : tm exp -> tm exp.
+snd : tm exp -> tm exp.
 
 % Now we define two basic refinement judgments: that some term is a type, and that
 % some term is an inhabited type.
-ty : tm exp -> jdg triv.
+ty : tm exp -> tm exp -> jdg triv.
 eq : tm exp -> tm exp -> tm exp -> jdg triv.
 inh : tm exp -> jdg exp.
 syn : tm exp -> jdg exp.
@@ -60,22 +69,22 @@ dfun-dom : tm exp -> jdg exp.
 dfun-cod : tm exp -> jdg (exp => exp).
 
 dfun-dom/unify
-  : dfun-dom (dfun A _) ~> A.
+   : dfun-dom (dfun A _) ~> A.
 
 dfun-cod/unify
-  : dfun-cod (dfun _ B) ~> B.
+   : dfun-cod (dfun _ B) ~> B.
 
-
-ty/bool
-   : ty bool ~> *.
-ty/dfun 
-   : ty (dfun A (abs B)) ~> *
-      <- ty A ~> _
-      <- inh A >> ([x] ty (B x)) ~> _.
+ty/bool 
+   : ty bool bool ~> *.
+ty/dfun
+   : ty (dfun A1 (abs B1)) (dfun A2 (abs B2)) ~> *
+      <- ty A1 A2 ~> _
+      <- inh A1 >> ([x] ty (B1 x) (B2 x)) ~> _.
 ty/dpair
-   : ty (dpair A (abs B)) ~> *
-      <- ty A ~> _
-      <- inh A >> ([x] ty (B x)) ~> _.
+   : ty (dpair A1 (abs B1)) (dpair A2 (abs B2)) ~> *
+      <- ty A1 A2 ~> _
+      <- inh A1 >> ([x] ty (B1 x) (B2 x)) ~> _.
+
 inh/tt
    : inh bool ~> tt.
 
@@ -84,15 +93,20 @@ inh/ff
 
 inh/pair 
    : inh (dpair A (abs B)) ~> pair M N
-      <- (inh A >> [x] ty (B x)) ~> _
+      <- (inh A >> [x] ty (B x) (B x)) ~> _
       <- inh A ~> M
       <- inh (B M) ~> N.
 
 inh/lam
    : inh (dfun A (abs B)) ~> lam F
-      <- ty A ~> _
+      <- ty A A ~> _
       <- inh A >> ([x] inh (B x)) ~> F.
 
+inh/spread
+   : inh CZ ~> F (fst Z) (snd Z)
+      <- fam-unapply (inh CZ) Z C
+      <- Z <~ inh (dpair A (abs B))
+      <- (inh A >> [x] inh (B x) >> [y] C (pair x y)) ~> abs [x] abs [y] F x y.
 
 eq/tt
    : eq bool tt tt ~> *.
@@ -100,7 +114,7 @@ eq/ff
    : eq bool ff ff ~> *.
 eq/pair
    : eq (dpair A (abs B)) (pair M1 N1) (pair M2 N2) ~> *
-      <- (inh A >> [x] ty (B x)) ~> _
+      <- (inh A >> [x] ty (B x) (B x)) ~> _
       <- eq A M1 M2 ~> _
       <- eq (B M1) N1 N2 ~> _.
 eq/lam
@@ -124,30 +138,3 @@ syn/ap
 
 
 %solve test : inh (dfun bool (abs [x] dfun bool (abs [y] bool))) ~> _.
-
-% Now we can prove a metatheorem for our refinement logic: if a expression is inhabited, then it is
-% a type.
-
-inh=>ty : inh A ~> E -> ty A ~> * -> type.
-%mode inh=>ty +I -T.
-
-%block inh=>ty-hyp 
-   : some {A:tm exp} {A/ty : ty A ~> *}
-      block {x:tm exp} {x/inh : inh A ~> x} {x/rem : x <~ inh A} {ih : inh=>ty x/inh A/ty}.
-
-
-- : inh=>ty inh/tt ty/bool.
-- : inh=>ty inh/ff ty/bool.
-- : inh=>ty
-     (inh/pair B/inh A/inh B/ty)
-     (ty/dpair B/ty A/ty)
-     <- inh=>ty A/inh A/ty.
-- : inh=>ty
-     (inh/lam (~>/>> B/inh) A/ty)
-     (ty/dfun (~>/>> B/ty) A/ty)
-     <- {x} {x/inh} {x/rem} inh=>ty x/inh A/ty 
-        -> inh=>ty (B/inh x x/inh x/rem) (B/ty x x/inh x/rem).
-
-%worlds (inh=>ty-hyp) (inh=>ty _ _).
-%total I (inh=>ty I _).
-
