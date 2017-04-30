@@ -28,7 +28,7 @@ sig
   val eval : machine -> Rules.state
 end
 
-functor LF_REFINER (R : LF_RULES) : LF_REFINER = 
+functor LfRefiner (R : LF_RULES) : LF_REFINER = 
 struct
   structure Rules = R
   open R
@@ -87,7 +87,7 @@ struct
   fun init tac cl = 
     FOCUS (tac, cl, [])
 
-  open Lf infix \ `@
+  open Lf infix \ \\ `@ ==>
   
   fun printState (Psi \ evd) = 
     Print.ctx Psi 
@@ -104,10 +104,16 @@ struct
        [] => "[]"
      | instr :: stk => printInstr instr ^ " :: " ^ printStack stk
 
+
   fun stepFocus (tac, cl, stk) : machine = 
     case tac of 
        RULE rl => RETN (rule rl cl, stk)
-     | ID => FOCUS (tac, cl, stk)
+     | ID =>
+       let
+         val x = Sym.new ()
+       in
+         RETN ([(x, cl)] \ eta (x, cl), stk)
+       end
      | SEQ (tac, mtac) => FOCUS (tac, cl, PUSH mtac :: stk)
 
   fun stepRetn (st as Psi \ evd, stk) : machine step = 
@@ -134,6 +140,7 @@ struct
              ^ printState st
              ^ "\n\nRemaining tasks: \n------------------------------\n"
              ^ printStack stk
+             ^ "\n\n"
        in 
          print debugStr;
          RETN (st, stk)

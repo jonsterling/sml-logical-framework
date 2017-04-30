@@ -18,6 +18,8 @@ sig
   val --> : ctx * rclass -> class
   val ==> : class list * rclass -> class
 
+  val eta : var * class -> ntm
+
   structure Unbind :
   sig
     val ntm : ntm -> (var, rtm) binder

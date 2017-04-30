@@ -102,6 +102,16 @@ struct
       end
   end
 
+
+  fun eta (x : var, cl : class) : ntm = 
+    let
+      val Psi \ rcl = Unbind.class cl
+      val xs = List.map eta Psi
+    in
+      List.map #1 Psi \\ (x `@ xs)
+    end
+
+
   structure Eq =
   struct
     type env = var env * var env
