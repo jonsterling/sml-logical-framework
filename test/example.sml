@@ -69,11 +69,11 @@ struct
         let
           val H \ (rcl : rclass) = Unbind.class goal
           val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
-          val ([] \ rcl') = Unbind.class hypcl (* for now. later on, generate subgoals! *)
+          val (Psi \ rcl') = Unbind.class hypcl
           val true = Eq.rclass (rcl, rcl')
           val xs = List.map #1 H
         in
-          [] \ (xs \\ (z `@ []))
+          Psi \ (xs \\ (z `@ []))
         end
 
       fun NatZ goal =
