@@ -129,15 +129,16 @@ struct
   fun test () = 
     let
       open Refiner Rules
-      val >> = SEQ infixr >>
+      val sequence = List.foldr SEQ (EACH [])
 
       val script =
-        ALL (RULE ARR_I)
-        >> DEBUG "arr/i"
-        >> ALL (RULE NAT_S)
-        >> DEBUG "nat/s"
-        >> ALL (RULE (HYP 0))
-        >> DEBUG "hyp"
+        sequence
+          [ALL (RULE ARR_I),
+           DEBUG "arr/i",
+           ALL (RULE NAT_S),
+           DEBUG "nat/s",
+           ALL (RULE (HYP 0)),
+           DEBUG "hyp"]
 
       val goal = [] ==> `(Inh (Arr (Nat, Nat)))
       val machine = init (MT script) goal
