@@ -49,23 +49,6 @@ struct
    | DEBUG of string
    | SEQ of multitactic * multitactic
 
-  fun printTactic tac = 
-    case tac of 
-       RULE rl => printRule rl
-     | MT mtac => printMultitactic mtac
-  
-  and printMultitactic mtac = 
-    case mtac of 
-       ALL tac => printTactic tac
-     | EACH tacs => "[" ^ printTactics tacs ^ "]"
-     | DEBUG msg => "debug(\"" ^ msg ^ "\")"
-     | SEQ (mtac1, mtac2) => "(" ^ printMultitactic mtac1 ^ "); (" ^ printMultitactic mtac2 ^ ")"
-
-  and printTactics tacs = 
-    case tacs of 
-       [] => ""
-     | [tac] => printTactic tac 
-     | tac :: tacs => printTactic tac ^ ", " ^ printTactics tacs
 
 
   datatype instr = 
@@ -92,21 +75,42 @@ struct
     FOCUS {tactic = tac, goal = cl, stack = []}
 
   open Lf infix \ \\ `@ ==>
-  
-  fun printState (Psi \ evd) = 
-    Print.ctx Psi 
-      ^ "\n   ===>  " 
-      ^ Print.ntm evd
 
-  val printInstr = 
-    fn PUSH mtac => "{" ^ printMultitactic mtac ^ "}"
-     | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ printMultitactic mtac ^ "}, " ^ printState st ^ ")"
-     | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
+  structure Print = 
+  struct
+    fun tactic tac = 
+      case tac of 
+        RULE rl => printRule rl
+      | MT mtac => multitactic mtac
+    
+    and multitactic mtac = 
+      case mtac of 
+        ALL tac => tactic tac
+      | EACH tacs => "[" ^ tactics tacs ^ "]"
+      | DEBUG msg => "debug(\"" ^ msg ^ "\")"
+      | SEQ (mtac1, mtac2) => "(" ^ multitactic mtac1 ^ "); (" ^ multitactic mtac2 ^ ")"
 
-  fun printStack stk = 
-    case stk of 
-       [] => "[]"
-     | instr :: stk => printInstr instr ^ " :: " ^ printStack stk
+    and tactics tacs = 
+      case tacs of 
+        [] => ""
+      | [tac] => tactic tac 
+      | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
+    
+    fun state (Psi \ evd) = 
+      Print.ctx Psi 
+        ^ "\n   ===>  " 
+        ^ Print.ntm evd
+
+    val instr = 
+      fn PUSH mtac => "{" ^ multitactic mtac ^ "}"
+      | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ multitactic mtac ^ "}, " ^ state st ^ ")"
+      | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
+
+    fun stack stk = 
+      case stk of 
+        [] => "[]"
+      | i :: stk => instr i ^ " :: " ^ stack stk
+  end
 
   fun stepFocus {tactic, goal, stack} : machine = 
     case tactic of 
@@ -139,9 +143,9 @@ struct
          val debugStr = 
            "[DEBUG] " ^ msg ^ "\n\n"
              ^ "Proof state: \n------------------------------\n"
-             ^ printState state
+             ^ Print.state state
              ^ "\n\nRemaining tasks: \n------------------------------\n"
-             ^ printStack stack
+             ^ Print.stack stack
              ^ "\n\n"
        in 
          print debugStr;
