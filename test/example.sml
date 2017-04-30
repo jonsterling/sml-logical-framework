@@ -51,11 +51,12 @@ struct
   structure Rules = 
   struct
     structure Lf = TinyLf
-    datatype rule = NAT_Z | NAT_S | ARR_I
+    datatype rule = NAT_Z | NAT_S | ARR_I | HYP of int
     val printRule = 
       fn NAT_Z => "nat/z"
        | NAT_S => "nat/s"
        | ARR_I => "arr/i"
+       | HYP x => "hyp[" ^ Int.toString x ^ "]"
 
     type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
     type unnamer = Lf.var -> int option
@@ -63,6 +64,18 @@ struct
     local
       open Lf infix \ `@ \\
     in
+
+      fun Hyp (i : int) goal = 
+        let
+          val H \ (rcl : rclass) = Unbind.class goal
+          val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
+          val ([] \ rcl') = Unbind.class hypcl (* for now. later on, generate subgoals! *)
+          val true = Eq.rclass (rcl, rcl')
+          val xs = List.map #1 H
+        in
+          [] \ (xs \\ (z `@ []))
+        end
+
       fun NatZ goal =
         let
           val H \ `(C Sg.INH `@ [tyNat]) = Unbind.class goal 
@@ -72,7 +85,17 @@ struct
           [] \ (xs \\ Ze)
         end
 
-      fun NatS _ = raise Match
+      fun NatS goal =
+        let
+          val H \ `(C Sg.INH `@ [tyNat]) = Unbind.class goal 
+          val [] \ (C Sg.NAT `@ []) = Unbind.ntm tyNat
+          val xs = List.map #1 H
+
+          val X = Sym.named "X"
+          val Psi = [(X, H --> `(Inh Nat))]
+        in
+          Psi \ (xs \\ Su (X `@ List.map eta H))
+        end
 
       fun ArrI goal =
         let
@@ -94,11 +117,11 @@ struct
         end
     end
 
-    fun rule ixOfName = 
+    val rule = 
       fn NAT_Z => NatZ 
        | NAT_S => NatS
        | ARR_I => ArrI
-
+       | HYP x => Hyp x
   end
 
   structure Refiner = LfRefiner (Rules)
@@ -106,14 +129,18 @@ struct
   fun test () = 
     let
       open Refiner Rules
-      val >> = SEQ infix >>
+      val >> = SEQ infixr >>
+
       val script =
-        RULE ARR_I
+        ALL (RULE ARR_I)
         >> DEBUG "arr/i"
-        >> EACH [RULE NAT_Z]
-        >> DEBUG "nat/z"
+        >> EACH [RULE NAT_S]
+        >> DEBUG "nat/s"
+        >> EACH [RULE (HYP 0)]
+        >> DEBUG "hyp"
+
       val goal = [] ==> `(Inh (Arr (Nat, Nat)))
-      val machine = init script goal
+      val machine = init (MT script) goal
     in
       eval machine
     end
