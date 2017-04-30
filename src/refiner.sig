@@ -4,8 +4,9 @@ sig
 
   type rule
   type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
+  type unnamer = Lf.var -> int option
 
-  val rule : rule -> Lf.class -> state
+  val rule : unnamer -> rule -> Lf.class -> state
   val printRule : rule -> string
 end
 
@@ -70,9 +71,10 @@ struct
    | PREPEND of Lf.ctx
 
   type stack = instr list
+  type name_store = Lf.var list
 
-  type machine_focus = tactic * Lf.class * stack
-  type machine_multi = multitactic * state * stack
+  type machine_focus = tactic * name_store * Lf.class * stack
+  type machine_multi = multitactic * name_store * state * stack
   type machine_retn = state * stack
 
   datatype machine = 
@@ -85,7 +87,7 @@ struct
    | FINAL of state
   
   fun init tac cl = 
-    FOCUS (tac, cl, [])
+    FOCUS (tac, [], cl, [])
 
   open Lf infix \ \\ `@ ==>
   
@@ -105,32 +107,37 @@ struct
      | instr :: stk => printInstr instr ^ " :: " ^ printStack stk
 
 
-  fun stepFocus (tac, cl, stk) : machine = 
+  fun stepFocus (tac, names, cl, stk) : machine = 
     case tac of 
-       RULE rl => RETN (rule rl cl, stk)
+       RULE rl =>
+       let
+         val st = rule (fn _ => ?todo) rl cl
+       in
+         RETN (st, stk)
+       end
      | ID =>
        let
          val x = Sym.new ()
        in
          RETN ([(x, cl)] \ eta (x, cl), stk)
        end
-     | SEQ (tac, mtac) => FOCUS (tac, cl, PUSH mtac :: stk)
+     | SEQ (tac, mtac) => FOCUS (tac, names, cl, PUSH mtac :: stk)
 
   fun stepRetn (st as Psi \ evd, stk) : machine step = 
     case stk of 
-       PUSH mtac :: stk => STEP (MULTI (mtac, st, stk))
+       PUSH mtac :: stk => STEP (MULTI (mtac, [], st, stk)) (* what about names?? *)
      | MTAC (x, mtac, Psi' \ evd') :: stk =>
        let
          val rhox = Sym.Env.singleton x evd
          val Psi'' = SubstN.ctx rhox Psi'
          val evd'' = SubstN.ntm rhox evd'
        in
-         STEP (MULTI (mtac, Psi'' \ evd'', PREPEND Psi :: stk))
+         STEP (MULTI (mtac, [], Psi'' \ evd'', PREPEND Psi :: stk))
        end
      | PREPEND Psi' :: stk => STEP (RETN (Psi' @ Psi \ evd, stk))
      | [] => FINAL st
        
-  fun stepMulti (mtac, st as Psi \ evd, stk) : machine =
+  fun stepMulti (mtac, names, st as Psi \ evd, stk) : machine =
     case (Psi, mtac) of 
        (_, DEBUG msg) =>
        let
@@ -146,9 +153,9 @@ struct
          RETN (st, stk)
        end
      | ([], _) => RETN (st, stk)
-     | ((x, cl) :: Psi, ALL tac) => FOCUS (tac, cl, MTAC (x, ALL tac, Psi \ evd) :: stk)
+     | ((x, cl) :: Psi, ALL tac) => FOCUS (tac, names, cl, MTAC (x, ALL tac, Psi \ evd) :: stk)
      | (_, EACH []) => RETN (st, stk)
-     | ((x, cl) :: Psi, EACH (tac :: tacs)) => FOCUS (tac, cl, MTAC (x, EACH tacs, Psi \ evd) :: stk)
+     | ((x, cl) :: Psi, EACH (tac :: tacs)) => FOCUS (tac, names, cl, MTAC (x, EACH tacs, Psi \ evd) :: stk)
 
   val step : machine -> machine step = 
     fn FOCUS foc => STEP (stepFocus foc)

@@ -58,6 +58,7 @@ struct
        | ARR_I => "arr/i"
 
     type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
+    type unnamer = Lf.var -> int option
     
     local
       open Lf infix \ `@ \\
@@ -93,7 +94,7 @@ struct
         end
     end
 
-    val rule = 
+    fun rule ixOfName = 
       fn NAT_Z => NatZ 
        | NAT_S => NatS
        | ARR_I => ArrI
@@ -111,10 +112,10 @@ struct
         >> DEBUG "arr/i"
         >> EACH [RULE NAT_Z]
         >> DEBUG "nat/z"
-      val machine = init script ([] ==> `(Inh (Arr (Nat, Nat))))
-      val state = eval machine
+      val goal = [] ==> `(Inh (Arr (Nat, Nat)))
+      val machine = init script goal
     in
-      ()
+      eval machine
     end
 
   val _ = LfExn.debug test
