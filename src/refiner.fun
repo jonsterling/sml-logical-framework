@@ -15,22 +15,26 @@ struct
    | EACH of tactic list
    | DEBUG of string
    | SEQ of multitactic * multitactic
+   | ORELSE of multitactic * multitactic
 
   datatype instr = 
      PUSH of multitactic
    | MTAC of Lf.var * multitactic * state
    | PREPEND of Lf.ctx
+   | HANDLE of machine_multi
 
-  type stack = instr list
+  withtype stack = instr list
 
-  type machine_focus = {tactic: tactic, goal: Lf.class, stack: stack}
-  type machine_multi = {multitactic: multitactic, state: state, stack: stack}
-  type machine_retn = {state: state, stack: stack}
+  and machine_focus = {tactic: tactic, goal: Lf.class, stack: stack}
+  and machine_multi = {multitactic: multitactic, state: state, stack: stack}
+  and machine_retn = {state: state, stack: stack}
+  and machine_throw = {exn: exn, trace: stack, stack: stack} 
 
   datatype machine = 
      FOCUS of machine_focus
    | MULTI of machine_multi
    | RETN of machine_retn
+   | THROW of machine_throw
 
   datatype 'a step = 
      STEP of 'a
@@ -54,6 +58,7 @@ struct
       | EACH tacs => "[" ^ tactics tacs ^ "]"
       | DEBUG msg => "debug(\"" ^ msg ^ "\")"
       | SEQ (mtac1, mtac2) => multitactic mtac1 ^ "; " ^ multitactic mtac2
+      | ORELSE (mtac1, mtac2) => "{" ^ multitactic mtac1 ^ "} | {" ^ multitactic mtac2 ^ "}"
 
     and tactics tacs = 
       case tacs of 
@@ -68,18 +73,32 @@ struct
 
     val instr = 
       fn PUSH mtac => "{" ^ multitactic mtac ^ "}"
-      | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ multitactic mtac ^ "}, " ^ state st ^ ")"
-      | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
+       | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ multitactic mtac ^ "}, " ^ state st ^ ")"
+       | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
 
     fun stack stk = 
       case stk of 
-        [] => "[]"
-      | i :: stk => instr i ^ " :: " ^ stack stk
+         [] => "[]"
+       | i :: stk => instr i ^ " :: " ^ stack stk
+  end
+
+  structure Exn = 
+  struct
+    type refine_error = exn * stack
+    exception Refine of refine_error
+
+    fun description (exn, stack) = 
+      "[ERROR] "
+        ^ exnMessage exn
+        ^ "\n\nStack trace:\n"
+        ^ Print.stack stack
   end
 
   fun stepFocus {tactic, goal, stack} : machine = 
     case tactic of 
-       RULE rl => RETN {state = rule rl goal, stack =  stack}
+       RULE rl => 
+         (RETN {state = rule rl goal, stack = stack}
+          handle exn => THROW {exn = exn, trace = [], stack = stack})
      | MT mtac =>
        let
          val x = Sym.new ()
@@ -99,9 +118,16 @@ struct
          STEP (MULTI {multitactic = mtac, state = Psi'' \ evd'', stack = PREPEND Psi :: stk})
        end
      | PREPEND Psi' :: stk => STEP (RETN {state = Psi' @ Psi \ evd, stack = stk})
+     | HANDLE _ :: stk => STEP (RETN {state = state, stack = stk})
      | [] => FINAL state
 
-  fun stepMulti {multitactic, state as Psi \ evd, stack} : machine =
+  fun stepThrow {exn, trace, stack} : machine step =
+    case stack of 
+       [] => raise Exn.Refine (exn, trace)
+     | HANDLE multi :: stk => STEP (MULTI multi)
+     | instr :: stk => STEP (THROW {exn = exn, trace = instr :: trace, stack = stk})
+
+  fun stepMulti (multi as {multitactic, state as Psi \ evd, stack}) : machine =
     case (Psi, multitactic) of 
        (_, DEBUG msg) =>
        let
@@ -126,10 +152,13 @@ struct
        RETN {state = state, stack = stack}
      | ((x, cl) :: Psi, EACH (tac :: tacs)) =>
        FOCUS {tactic = tac, goal = cl, stack = MTAC (x, EACH tacs, Psi \ evd) :: stack}
+     | (_, ORELSE (mtac1, mtac2)) => 
+       MULTI {multitactic = mtac1, state = state, stack = HANDLE multi :: stack}
 
   val step : machine -> machine step = 
     fn FOCUS foc => STEP (stepFocus foc)
      | MULTI multi => STEP (stepMulti multi)
+     | THROW throw => stepThrow throw
      | RETN retn => stepRetn retn
 
   fun eval m = 

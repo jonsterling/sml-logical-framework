@@ -25,6 +25,14 @@ sig
    | EACH of tactic list
    | DEBUG of string
    | SEQ of multitactic * multitactic
+   | ORELSE of multitactic * multitactic
+
+  structure Exn :
+  sig
+    type refine_error
+    exception Refine of refine_error
+    val description : refine_error -> string 
+  end
 
   type machine
   val init : tactic -> Rules.Lf.class -> machine
