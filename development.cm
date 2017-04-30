@@ -5,13 +5,13 @@ Group is
   src/syntax.sig
   src/exn.sig
   src/typing.sig
+  src/refiner.sig
 
   src/list_util.sml
   src/exn.fun
   src/symbol.fun
   src/syntax.fun
   src/typing.fun
-
-  src/refiner.sig
+  src/refiner.fun
 
   test/example.sml

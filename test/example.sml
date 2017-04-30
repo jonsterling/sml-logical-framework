@@ -65,6 +65,14 @@ struct
       open Lf infix \ `@ \\
     in
 
+      fun destInh goal = 
+        let
+          val H \ `(C Sg.INH `@ [ty]) = Unbind.class goal
+          val [] \ ty = Unbind.ntm ty
+        in
+          H \ ty
+        end
+
       fun Hyp (i : int) goal = 
         let
           val H \ (rcl : rclass) = Unbind.class goal
@@ -78,8 +86,7 @@ struct
 
       fun NatZ goal =
         let
-          val H \ `(C Sg.INH `@ [tyNat]) = Unbind.class goal 
-          val [] \ (C Sg.NAT `@ []) = Unbind.ntm tyNat
+          val H \ (C Sg.NAT `@ []) = destInh goal
           val xs = List.map #1 H
         in
           [] \ (xs \\ Ze)
@@ -87,8 +94,7 @@ struct
 
       fun NatS goal =
         let
-          val H \ `(C Sg.INH `@ [tyNat]) = Unbind.class goal 
-          val [] \ (C Sg.NAT `@ []) = Unbind.ntm tyNat
+          val H \ (C Sg.NAT `@ []) = destInh goal
           val xs = List.map #1 H
 
           val X = Sym.named "X"
@@ -99,8 +105,7 @@ struct
 
       fun ArrI goal =
         let
-          val H \ ` (C Sg.INH `@ [tyArr]) = Unbind.class goal
-          val [] \ (C Sg.ARR `@ [tyA, tyB]) = Unbind.ntm tyArr
+          val H \ (C Sg.ARR `@ [tyA, tyB]) = destInh goal
           val [] \ tyA = Unbind.ntm tyA
           val [] \ tyB = Unbind.ntm tyB
 
