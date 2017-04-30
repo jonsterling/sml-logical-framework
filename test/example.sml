@@ -134,9 +134,9 @@ struct
       val script =
         ALL (RULE ARR_I)
         >> DEBUG "arr/i"
-        >> EACH [RULE NAT_S]
+        >> ALL (RULE NAT_S)
         >> DEBUG "nat/s"
-        >> EACH [RULE (HYP 0)]
+        >> ALL (RULE (HYP 0))
         >> DEBUG "hyp"
 
       val goal = [] ==> `(Inh (Arr (Nat, Nat)))

@@ -13,9 +13,11 @@ signature LF_REFINER =
 sig
   structure Rules : LF_RULES
 
+  (* This somewhat nonstandard arrangement of tactics and 
+     multitactics is specifically to support local names for hypotheses
+     in tactic scripts in the future. Trust Jon Sterling Thought! *)
   datatype tactic =
      RULE of Rules.rule
-   | ID
    | MT of multitactic
 
   and multitactic = 
@@ -39,7 +41,6 @@ struct
 
   datatype tactic =
      RULE of rule
-   | ID
    | MT of multitactic
 
   and multitactic = 
@@ -51,7 +52,6 @@ struct
   fun printTactic tac = 
     case tac of 
        RULE rl => printRule rl
-     | ID => "id"
      | MT mtac => printMultitactic mtac
   
   and printMultitactic mtac = 
@@ -75,9 +75,9 @@ struct
 
   type stack = instr list
 
-  type machine_focus = tactic * Lf.class * stack
-  type machine_multi = multitactic * state * stack
-  type machine_retn = state * stack
+  type machine_focus = {tactic: tactic, goal: Lf.class, stack: stack}
+  type machine_multi = {multitactic: multitactic, state: state, stack: stack}
+  type machine_retn = {state: state, stack: stack}
 
   datatype machine = 
      FOCUS of machine_focus
@@ -89,7 +89,7 @@ struct
    | FINAL of state
   
   fun init tac cl = 
-    FOCUS (tac, cl, [])
+    FOCUS {tactic = tac, goal = cl, stack = []}
 
   open Lf infix \ \\ `@ ==>
   
@@ -108,56 +108,55 @@ struct
        [] => "[]"
      | instr :: stk => printInstr instr ^ " :: " ^ printStack stk
 
-  fun stepFocus (tac, cl, stk) : machine = 
-    case tac of 
-       RULE rl => RETN (rule rl cl, stk)
-     | ID =>
-       let
-         val x = Sym.new ()
-       in
-         RETN ([(x, cl)] \ eta (x, cl), stk)
-       end
+  fun stepFocus {tactic, goal, stack} : machine = 
+    case tactic of 
+       RULE rl => RETN {state = rule rl goal, stack =  stack}
      | MT mtac =>
        let
          val x = Sym.new ()
        in
-         RETN ([(x, cl)] \ eta (x, cl), PUSH mtac :: stk)
+         RETN {state = [(x, goal)] \ eta (x, goal), stack = PUSH mtac :: stack}
        end
 
-  fun stepRetn (st as Psi \ evd, stk) : machine step = 
-    case stk of 
-       PUSH mtac :: stk => STEP (MULTI (mtac, st, stk))
+  fun stepRetn {state as Psi \ evd, stack} : machine step = 
+    case stack of 
+       PUSH mtac :: stk => STEP (MULTI {multitactic = mtac, state = state, stack = stk})
      | MTAC (x, mtac, Psi' \ evd') :: stk =>
        let
          val rhox = Sym.Env.singleton x evd
          val Psi'' = SubstN.ctx rhox Psi'
          val evd'' = SubstN.ntm rhox evd'
        in
-         STEP (MULTI (mtac, Psi'' \ evd'', PREPEND Psi :: stk))
+         STEP (MULTI {multitactic = mtac, state = Psi'' \ evd'', stack = PREPEND Psi :: stk})
        end
-     | PREPEND Psi' :: stk => STEP (RETN (Psi' @ Psi \ evd, stk))
-     | [] => FINAL st
-       
-  fun stepMulti (mtac, st as Psi \ evd, stk) : machine =
-    case (Psi, mtac) of 
+     | PREPEND Psi' :: stk => STEP (RETN {state = Psi' @ Psi \ evd, stack = stk})
+     | [] => FINAL state
+
+  fun stepMulti {multitactic, state as Psi \ evd, stack} : machine =
+    case (Psi, multitactic) of 
        (_, DEBUG msg) =>
        let
          val debugStr = 
            "[DEBUG] " ^ msg ^ "\n\n"
              ^ "Proof state: \n------------------------------\n"
-             ^ printState st
+             ^ printState state
              ^ "\n\nRemaining tasks: \n------------------------------\n"
-             ^ printStack stk
+             ^ printStack stack
              ^ "\n\n"
        in 
          print debugStr;
-         RETN (st, stk)
+         RETN {state = state, stack = stack}
        end
-     | (_, SEQ (mtac1, mtac2)) => MULTI (mtac1, st, PUSH mtac2 :: stk)
-     | ([], _) => RETN (st, stk)
-     | ((x, cl) :: Psi, ALL tac) => FOCUS (tac, cl, MTAC (x, ALL tac, Psi \ evd) :: stk)
-     | (_, EACH []) => RETN (st, stk)
-     | ((x, cl) :: Psi, EACH (tac :: tacs)) => FOCUS (tac, cl, MTAC (x, EACH tacs, Psi \ evd) :: stk)
+     | (_, SEQ (mtac1, mtac2)) =>
+       MULTI {multitactic = mtac1, state = state, stack = PUSH mtac2 :: stack}
+     | ([], _) =>
+       RETN {state = state, stack = stack}
+     | ((x, cl) :: Psi, ALL tac) =>
+       FOCUS {tactic = tac, goal = cl, stack = MTAC (x, ALL tac, Psi \ evd) :: stack}
+     | (_, EACH []) =>
+       RETN {state = state, stack = stack}
+     | ((x, cl) :: Psi, EACH (tac :: tacs)) =>
+       FOCUS {tactic = tac, goal = cl, stack = MTAC (x, EACH tacs, Psi \ evd) :: stack}
 
   val step : machine -> machine step = 
     fn FOCUS foc => STEP (stepFocus foc)
