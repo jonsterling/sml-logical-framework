@@ -6,6 +6,7 @@ sig
   type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
 
   val rule : rule -> Lf.class -> state
+  val printRule : rule -> string
 end
 
 signature LF_REFINER = 
@@ -20,6 +21,7 @@ sig
   and multitactic = 
      ALL of tactic
    | EACH of tactic list
+   | DEBUG of string
 
   type machine
   val init : tactic -> Rules.Lf.class -> machine
@@ -41,6 +43,26 @@ struct
   and multitactic = 
      ALL of tactic
    | EACH of tactic list
+   | DEBUG of string
+
+  fun printTactic tac = 
+    case tac of 
+       RULE rl => printRule rl
+     | ID => "id"
+     | SEQ (tac, mtac) => printTactic tac ^ "; " ^ printMultitactic mtac
+  
+  and printMultitactic mtac = 
+    case mtac of 
+       ALL tac => printTactic tac
+     | EACH tacs => "[" ^ printTactics tacs ^ "]"
+     | DEBUG msg => "debug(\"" ^ msg ^ "\")"
+
+  and printTactics tacs = 
+    case tacs of 
+       [] => ""
+     | [tac] => printTactic tac 
+     | tac :: tacs => printTactic tac ^ ", " ^ printTactics tacs
+
 
   datatype instr = 
      PUSH of multitactic
@@ -66,6 +88,21 @@ struct
     FOCUS (tac, cl, [])
 
   open Lf infix \ `@
+  
+  fun printState (Psi \ evd) = 
+    Print.ctx Psi 
+      ^ "\n   ===>  " 
+      ^ Print.ntm evd
+
+  val printInstr = 
+    fn PUSH mtac => "{" ^ printMultitactic mtac ^ "}"
+     | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ printMultitactic mtac ^ "}, " ^ printState st ^ ")"
+     | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
+
+  fun printStack stk = 
+    case stk of 
+       [] => "[]"
+     | instr :: stk => printInstr instr ^ " :: " ^ printStack stk
 
   fun stepFocus (tac, cl, stk) : machine = 
     case tac of 
@@ -89,7 +126,19 @@ struct
        
   fun stepMulti (mtac, st as Psi \ evd, stk) : machine =
     case (Psi, mtac) of 
-       ([], _) => RETN (st, stk)
+       (_, DEBUG msg) =>
+       let
+         val debugStr = 
+           "[DEBUG] " ^ msg ^ "\n\n"
+             ^ "Proof state: \n------------------------------\n"
+             ^ printState st
+             ^ "\n\nRemaining tasks: \n------------------------------\n"
+             ^ printStack stk
+       in 
+         print debugStr;
+         RETN (st, stk)
+       end
+     | ([], _) => RETN (st, stk)
      | ((x, cl) :: Psi, ALL tac) => FOCUS (tac, cl, MTAC (x, ALL tac, Psi \ evd) :: stk)
      | (_, EACH []) => RETN (st, stk)
      | ((x, cl) :: Psi, EACH (tac :: tacs)) => FOCUS (tac, cl, MTAC (x, EACH tacs, Psi \ evd) :: stk)
