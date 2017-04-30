@@ -12,4 +12,6 @@ Group is
   src/syntax.fun
   src/typing.fun
 
+  src/refiner.sig
+
   test/example.sml
