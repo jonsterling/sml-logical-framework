@@ -49,22 +49,22 @@ struct
   struct
     fun tactic tac = 
       case tac of 
-        RULE rl => printRule rl
-      | MT mtac => multitactic mtac
+         RULE rl => printRule rl
+       | MT mtac => multitactic mtac
     
     and multitactic mtac = 
       case mtac of 
-        ALL tac => tactic tac
-      | EACH tacs => "[" ^ tactics tacs ^ "]"
-      | DEBUG msg => "debug(\"" ^ msg ^ "\")"
-      | SEQ (mtac1, mtac2) => multitactic mtac1 ^ "; " ^ multitactic mtac2
-      | ORELSE (mtac1, mtac2) => "{" ^ multitactic mtac1 ^ "} | {" ^ multitactic mtac2 ^ "}"
+         ALL tac => tactic tac
+       | EACH tacs => "[" ^ tactics tacs ^ "]"
+       | DEBUG msg => "debug(\"" ^ msg ^ "\")"
+       | SEQ (mtac1, mtac2) => multitactic mtac1 ^ "; " ^ multitactic mtac2
+       | ORELSE (mtac1, mtac2) => "{" ^ multitactic mtac1 ^ "} | {" ^ multitactic mtac2 ^ "}"
 
     and tactics tacs = 
       case tacs of 
-        [] => ""
-      | [tac] => tactic tac 
-      | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
+         [] => ""
+       | [tac] => tactic tac 
+       | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
     
     fun state (Psi \ evd) = 
       Print.ctx Psi 
@@ -75,6 +75,7 @@ struct
       fn PUSH mtac => "{" ^ multitactic mtac ^ "}"
        | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ multitactic mtac ^ "}, " ^ state st ^ ")"
        | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
+       | HANDLE _ => "handler"
 
     fun stack stk = 
       case stk of 
