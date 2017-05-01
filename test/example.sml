@@ -73,15 +73,23 @@ struct
           H \ ty
         end
 
+      fun prependHyps H cl = 
+        let
+          val Psi \ rcl = Unbind.class cl
+        in
+          H @ Psi --> rcl
+        end
+
       fun Hyp (i : int) goal = 
         let
           val H \ (rcl : rclass) = Unbind.class goal
           val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
           val (Psi \ rcl') = Unbind.class hypcl
+          val Psi' = List.map (fn (x, cl) => (x, prependHyps H cl)) Psi
           val true = Eq.rclass (rcl, rcl')
           val xs = List.map #1 H
         in
-          Psi \ (xs \\ (z `@ List.map eta Psi))
+          Psi' \ (xs \\ (z `@ List.map eta Psi'))
         end
 
       fun NatZ goal =
