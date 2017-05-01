@@ -139,10 +139,10 @@ struct
       val script =
         sequence
           [ALL (RULE ARR_I),
-           DEBUG "arr/i",
+           (*DEBUG "arr/i",*)
            ALL (RULE NAT_S),
-           DEBUG "nat/s",
-           ALL (RULE (HYP 0)),
+           (*DEBUG "nat/s",*)
+           ALL (RULE (HYP 3)),
            DEBUG "hyp"]
 
       val goal = [] ==> `(Inh (Arr (Nat, Nat)))
@@ -151,6 +151,12 @@ struct
       eval machine
     end
 
-  val _ = LfExn.debug test
+  fun debug x = 
+    LfExn.debug x 
+    handle Refiner.Exn.Refine err => 
+      (print ("\n\n" ^ Refiner.Exn.description err ^ "\n\n");
+       raise Refiner.Exn.Refine err)
+
+  val _ = debug test
 
 end

@@ -28,7 +28,7 @@ struct
   and machine_focus = {tactic: tactic, goal: Lf.class, stack: stack}
   and machine_multi = {multitactic: multitactic, state: state, stack: stack}
   and machine_retn = {state: state, stack: stack}
-  and machine_throw = {exn: exn, trace: stack, stack: stack} 
+  and machine_throw = {exn: exn, goal: Lf.class, trace: stack, stack: stack} 
 
   datatype machine = 
      FOCUS of machine_focus
@@ -73,7 +73,7 @@ struct
 
     val instr = 
       fn PUSH mtac => "{" ^ multitactic mtac ^ "}"
-       | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]({" ^ multitactic mtac ^ "}, " ^ state st ^ ")"
+       | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
        | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
        | HANDLE _ => "handler"
 
@@ -85,21 +85,23 @@ struct
 
   structure Exn = 
   struct
-    type refine_error = exn * stack
+    type refine_error = exn * Lf.class * stack
     exception Refine of refine_error
 
-    fun description (exn, stack) = 
+    fun description (exn, goal, stack) = 
       "[ERROR] "
         ^ exnMessage exn
+        ^ " when refining goal "
+        ^ Lf.Print.class goal
         ^ "\n\nStack trace:\n"
-        ^ Print.stack stack
+        ^ Print.stack (List.rev stack)
   end
 
   fun stepFocus {tactic, goal, stack} : machine = 
     case tactic of 
        RULE rl => 
          (RETN {state = rule rl goal, stack = stack}
-          handle exn => THROW {exn = exn, trace = [], stack = stack})
+          handle exn => THROW {exn = exn, goal = goal, trace = [], stack = stack})
      | MT mtac =>
        let
          val x = Sym.new ()
@@ -122,11 +124,11 @@ struct
      | HANDLE _ :: stk => STEP (RETN {state = state, stack = stk})
      | [] => FINAL state
 
-  fun stepThrow {exn, trace, stack} : machine step =
+  fun stepThrow {exn, goal, trace, stack} : machine step =
     case stack of 
-       [] => raise Exn.Refine (exn, trace)
+       [] => raise Exn.Refine (exn, goal, trace)
      | HANDLE multi :: stk => STEP (MULTI multi)
-     | instr :: stk => STEP (THROW {exn = exn, trace = instr :: trace, stack = stk})
+     | instr :: stk => STEP (THROW {exn = exn, goal = goal, trace = instr :: trace, stack = stk})
 
   fun stepMulti (multi as {multitactic, state as Psi \ evd, stack}) : machine =
     case (Psi, multitactic) of 
