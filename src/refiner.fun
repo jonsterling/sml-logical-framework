@@ -1,4 +1,3 @@
-
 functor LfRefiner (R : LF_RULES) : LF_REFINER = 
 struct
   structure Rules = R
@@ -55,10 +54,10 @@ struct
      STEP of 'a
    | FINAL of state
   
-  fun init tac cl = 
+  fun init tac goal = 
     FOCUS
       {tactic = tac,
-       goal = cl,
+       goal = goal,
        stack = []}
 
   open Lf infix \ \\ `@ ==>
@@ -211,10 +210,10 @@ struct
          {state = state,
           stack = stack}
 
-     | ((x, cl) :: Psi, ALL tac) =>
+     | ((x, goal) :: Psi, ALL tac) =>
        STEP o FOCUS @@
          {tactic = tac,
-          goal = cl,
+          goal = goal,
           stack = AWAIT (x, ALL tac, Psi \ evd) :: stack}
 
      | (_, EACH []) =>
@@ -222,10 +221,10 @@ struct
          {state = state,
           stack = stack}
 
-     | ((x, cl) :: Psi, EACH (tac :: tacs)) =>
+     | ((x, goal) :: Psi, EACH (tac :: tacs)) =>
        STEP o FOCUS @@
          {tactic = tac,
-          goal = cl,
+          goal = goal,
           stack = AWAIT (x, EACH tacs, Psi \ evd) :: stack}
 
      | (_, ORELSE (mtac1, mtac2)) => 

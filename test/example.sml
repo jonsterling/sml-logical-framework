@@ -28,7 +28,8 @@ struct
   structure TinyLf = LfTyping (Syn)
 
   open TinyLf Sym
-  infix `@ \\ --> ==>
+  infix 3 `@
+  infixr 2 \ \\ --> ==>
 
   val Exp = C Sg.EXP `@ []
 
@@ -59,76 +60,64 @@ struct
        | HYP x => "hyp[" ^ Int.toString x ^ "]"
 
     type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
-    type unnamer = Lf.var -> int option
-    
-    local
-      open Lf infix \ `@ \\
-    in
 
-      fun destInh goal = 
-        let
-          val H \ `(C Sg.INH `@ [ty]) = Unbind.class goal
-          val [] \ ty = Unbind.ntm ty
-        in
-          H \ ty
-        end
+    fun destInh goal = 
+      let
+        val H \ `(C Sg.INH `@ [ty]) = Unbind.class goal
+        val [] \ ty = Unbind.ntm ty
+      in
+        H \ ty
+      end
 
-      fun prependHyps H cl = 
-        let
-          val Psi \ rcl = Unbind.class cl
-        in
-          H @ Psi --> rcl
-        end
+    fun prependHyps H cl = 
+      let
+        val Psi \ rcl = Unbind.class cl
+      in
+        H @ Psi --> rcl
+      end
 
-      fun Hyp (i : int) goal = 
-        let
-          val H \ (rcl : rclass) = Unbind.class goal
-          val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
-          val (Psi \ rcl') = Unbind.class hypcl
-          val Psi' = List.map (fn (x, cl) => (x, prependHyps H cl)) Psi
-          val true = Eq.rclass (rcl, rcl')
-          val xs = List.map #1 H
-        in
-          Psi' \ (xs \\ (z `@ List.map eta Psi'))
-        end
+    fun Hyp (i : int) goal = 
+      let
+        val H \ rcl = Unbind.class goal
+        val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
+        val Psi \ rcl' = Unbind.class hypcl
+        val Psi' = List.map (fn (x, cl) => (x, prependHyps H cl)) Psi
+        val true = Eq.rclass (rcl, rcl')
+      in
+        Psi' \ List.map #1 H \\ z `@ List.map eta Psi'
+      end
 
-      fun NatZ goal =
-        let
-          val H \ (C Sg.NAT `@ []) = destInh goal
-          val xs = List.map #1 H
-        in
-          [] \ (xs \\ Ze)
-        end
+    fun NatZ goal =
+      let
+        val H \ C Sg.NAT `@ [] = destInh goal
+        val xs = List.map #1 H
+      in
+        [] \ (xs \\ Ze)
+      end
 
-      fun NatS goal =
-        let
-          val H \ (C Sg.NAT `@ []) = destInh goal
-          val xs = List.map #1 H
+    fun NatS goal =
+      let
+        val H \ (C Sg.NAT `@ []) = destInh goal
+        val X = Sym.named "X"
+        val Psi = [(X, H --> `(Inh Nat))]
+      in
+        Psi \ List.map #1 H \\ Su (X `@ List.map eta H)
+      end
 
-          val X = Sym.named "X"
-          val Psi = [(X, H --> `(Inh Nat))]
-        in
-          Psi \ (xs \\ Su (X `@ List.map eta H))
-        end
+    fun ArrI goal =
+      let
+        val H \ (C Sg.ARR `@ [tyA, tyB]) = destInh goal
+        val [] \ tyA = Unbind.ntm tyA
+        val [] \ tyB = Unbind.ntm tyB
 
-      fun ArrI goal =
-        let
-          val H \ (C Sg.ARR `@ [tyA, tyB]) = destInh goal
-          val [] \ tyA = Unbind.ntm tyA
-          val [] \ tyB = Unbind.ntm tyB
+        val X = Sym.named "X"
+        val x = Sym.named "x"
 
-          val X = Sym.named "X"
-          val x = Sym.named "x"
-
-          val H' = H @ [(x, [] ==> `(Inh tyA))]
-          val Psi = [(X, H' --> `(Inh tyB))]
-
-          val xs = List.map #1 H
-          val lam = xs \\ (Lam (x, X `@ List.map eta H'))
-        in
-          Psi \ lam
-        end
-    end
+        val Hx = H @ [(x, [] ==> `(Inh tyA))]
+        val Psi = [(X, Hx --> `(Inh tyB))]
+      in
+        Psi \ List.map #1 H \\ Lam (x, X `@ List.map eta Hx)
+      end
 
     val rule = 
       fn NAT_Z => NatZ 
