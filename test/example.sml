@@ -139,10 +139,10 @@ struct
       val script =
         sequence
           [ALL (RULE ARR_I),
-           (*DEBUG "arr/i",*)
+           DEBUG "arr/i",
            ALL (RULE NAT_S),
-           (*DEBUG "nat/s",*)
-           ALL (RULE (HYP 3)),
+           DEBUG "nat/s",
+           ALL (RULE (HYP 0)),
            DEBUG "hyp"]
 
       val goal = [] ==> `(Inh (Arr (Nat, Nat)))
