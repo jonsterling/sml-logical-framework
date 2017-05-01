@@ -81,7 +81,7 @@ struct
           val true = Eq.rclass (rcl, rcl')
           val xs = List.map #1 H
         in
-          Psi \ (xs \\ (z `@ []))
+          Psi \ (xs \\ (z `@ List.map eta Psi))
         end
 
       fun NatZ goal =
