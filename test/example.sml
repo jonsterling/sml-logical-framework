@@ -146,7 +146,8 @@ struct
 
       val script =
         sequence
-          [ALL (RULE ARR_I),
+          [DEBUG "start",
+           ALL (RULE ARR_I),
            DEBUG "arr/i",
            ALL (RULE NAT_S),
            DEBUG "nat/s",

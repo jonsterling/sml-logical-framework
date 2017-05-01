@@ -17,9 +17,15 @@ struct
    | SEQ of multitactic * multitactic
    | ORELSE of multitactic * multitactic
 
-  datatype instr = 
-     PUSH of multitactic
-   | MTAC of Lf.var * multitactic * state
+  (* The refinement machine has four instructions:
+       1. [MTAC mtac] means "run [mtac] on returned proof state"
+       2. [AWAIT (x, mtac, st)] means "wait for [x] to emit a proof state, and merge it with [st], and continue executing with [mtac]"
+       3. [PREPEND Psi] means "prepend the subgoals Psi onto the returned proof state"
+       4. [HANDLE cfg] means "in case of an error, restore the machine state [cfg]"
+   *)
+  datatype instr =
+     MTAC of multitactic
+   | AWAIT of Lf.var * multitactic * state
    | PREPEND of Lf.ctx
    | HANDLE of machine_multi
 
@@ -72,8 +78,8 @@ struct
         ^ Print.ntm evd
 
     val instr = 
-      fn PUSH mtac => "{" ^ multitactic mtac ^ "}"
-       | MTAC (x, mtac, st) => "mtac[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
+      fn MTAC mtac => "{" ^ multitactic mtac ^ "}"
+       | AWAIT (x, mtac, st) => "await[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
        | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
        | HANDLE _ => "handler"
 
@@ -106,13 +112,13 @@ struct
        let
          val x = Sym.new ()
        in
-         RETN {state = [(x, goal)] \ eta (x, goal), stack = PUSH mtac :: stack}
+         RETN {state = [(x, goal)] \ eta (x, goal), stack = MTAC mtac :: stack}
        end
 
   fun stepRetn {state as Psi \ evd, stack} : machine step = 
     case stack of 
-       PUSH mtac :: stk => STEP (MULTI {multitactic = mtac, state = state, stack = stk})
-     | MTAC (x, mtac, Psi' \ evd') :: stk =>
+       MTAC mtac :: stk => STEP (MULTI {multitactic = mtac, state = state, stack = stk})
+     | AWAIT (x, mtac, Psi' \ evd') :: stk =>
        let
          val rhox = Sym.Env.singleton x evd
          val Psi'' = SubstN.ctx rhox Psi'
@@ -146,15 +152,15 @@ struct
          RETN {state = state, stack = stack}
        end
      | (_, SEQ (mtac1, mtac2)) =>
-       MULTI {multitactic = mtac1, state = state, stack = PUSH mtac2 :: stack}
+       MULTI {multitactic = mtac1, state = state, stack = MTAC mtac2 :: stack}
      | ([], _) =>
        RETN {state = state, stack = stack}
      | ((x, cl) :: Psi, ALL tac) =>
-       FOCUS {tactic = tac, goal = cl, stack = MTAC (x, ALL tac, Psi \ evd) :: stack}
+       FOCUS {tactic = tac, goal = cl, stack = AWAIT (x, ALL tac, Psi \ evd) :: stack}
      | (_, EACH []) =>
        RETN {state = state, stack = stack}
      | ((x, cl) :: Psi, EACH (tac :: tacs)) =>
-       FOCUS {tactic = tac, goal = cl, stack = MTAC (x, EACH tacs, Psi \ evd) :: stack}
+       FOCUS {tactic = tac, goal = cl, stack = AWAIT (x, EACH tacs, Psi \ evd) :: stack}
      | (_, ORELSE (mtac1, mtac2)) => 
        MULTI {multitactic = mtac1, state = state, stack = HANDLE multi :: stack}
 
