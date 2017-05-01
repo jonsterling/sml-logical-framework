@@ -4,6 +4,9 @@ struct
   structure Rules = R
   open R
 
+  fun @@ (f, x) = f x
+  infix @@
+
   exception todo fun ?e = raise e
 
   datatype tactic =
@@ -36,6 +39,12 @@ struct
   and machine_retn = {state: state, stack: stack}
   and machine_throw = {exn: exn, goal: Lf.class, trace: stack, stack: stack} 
 
+  (* The refinement machine has four execution states:
+       1. Executing a tactic on a focused goal
+       2. Executing a multitactic on a proof state
+       3. Returning a proof state
+       4. Throwing an error
+   *)
   datatype machine = 
      FOCUS of machine_focus
    | MULTI of machine_multi
@@ -47,7 +56,10 @@ struct
    | FINAL of state
   
   fun init tac cl = 
-    FOCUS {tactic = tac, goal = cl, stack = []}
+    FOCUS
+      {tactic = tac,
+       goal = cl,
+       stack = []}
 
   open Lf infix \ \\ `@ ==>
 
@@ -103,70 +115,128 @@ struct
         ^ Print.stack (List.rev stack)
   end
 
-  fun stepFocus {tactic, goal, stack} : machine = 
+  fun goalToState (goal : class) : state  = 
+    let
+      val x = Sym.new ()
+    in
+      [(x, goal)] \ eta (x, goal)
+    end
+
+  fun stepFocus {tactic, goal, stack} : machine step = 
     case tactic of 
        RULE rl => 
-         (RETN {state = rule rl goal, stack = stack}
-          handle exn => THROW {exn = exn, goal = goal, trace = [], stack = stack})
+         STEP @@
+          (RETN {state = rule rl goal, stack = stack}
+            handle exn =>
+              THROW
+                {exn = exn,
+                goal = goal,
+                trace = [],
+                stack = stack})
      | MT mtac =>
-       let
-         val x = Sym.new ()
-       in
-         RETN {state = [(x, goal)] \ eta (x, goal), stack = MTAC mtac :: stack}
-       end
+         STEP o RETN @@
+           {state = goalToState goal,
+            stack = MTAC mtac :: stack}
 
   fun stepRetn {state as Psi \ evd, stack} : machine step = 
     case stack of 
-       MTAC mtac :: stk => STEP (MULTI {multitactic = mtac, state = state, stack = stk})
+       MTAC mtac :: stk =>
+         STEP o MULTI @@
+           {multitactic = mtac,
+            state = state,
+            stack = stk}
+
      | AWAIT (x, mtac, Psi' \ evd') :: stk =>
        let
          val rhox = Sym.Env.singleton x evd
          val Psi'' = SubstN.ctx rhox Psi'
          val evd'' = SubstN.ntm rhox evd'
        in
-         STEP (MULTI {multitactic = mtac, state = Psi'' \ evd'', stack = PREPEND Psi :: stk})
+         STEP o MULTI @@
+           {multitactic = mtac,
+            state = Psi'' \ evd'',
+            stack = PREPEND Psi :: stk}
        end
-     | PREPEND Psi' :: stk => STEP (RETN {state = Psi' @ Psi \ evd, stack = stk})
-     | HANDLE _ :: stk => STEP (RETN {state = state, stack = stk})
+
+     | PREPEND Psi' :: stk =>
+         STEP o RETN @@
+           {state = Psi' @ Psi \ evd,
+            stack = stk}
+
+     | HANDLE _ :: stk => 
+         STEP o RETN @@
+           {state = state,
+            stack = stk}
+
      | [] => FINAL state
 
   fun stepThrow {exn, goal, trace, stack} : machine step =
     case stack of 
        [] => raise Exn.Refine (exn, goal, trace)
-     | HANDLE multi :: stk => STEP (MULTI multi)
-     | instr :: stk => STEP (THROW {exn = exn, goal = goal, trace = instr :: trace, stack = stk})
+     | HANDLE multi :: stk => STEP @@ MULTI multi
+     | instr :: stk =>
+         STEP o THROW @@
+           {exn = exn,
+            goal = goal,
+            trace = instr :: trace,
+            stack = stk}
 
-  fun stepMulti (multi as {multitactic, state as Psi \ evd, stack}) : machine =
+  fun debugString msg {state, stack} = 
+    "[DEBUG] " ^ msg ^ "\n\n"
+      ^ "Proof state: \n------------------------------\n"
+      ^ Print.state state
+      ^ "\n\nRemaining tasks: \n------------------------------\n"
+      ^ Print.stack stack
+      ^ "\n\n"
+
+  fun stepMulti (multi as {multitactic, state as Psi \ evd, stack}) : machine step =
     case (Psi, multitactic) of 
        (_, DEBUG msg) =>
        let
-         val debugStr = 
-           "[DEBUG] " ^ msg ^ "\n\n"
-             ^ "Proof state: \n------------------------------\n"
-             ^ Print.state state
-             ^ "\n\nRemaining tasks: \n------------------------------\n"
-             ^ Print.stack stack
-             ^ "\n\n"
+         val retn = {state = state, stack = stack}
+         val debugStr = debugString msg retn
        in 
          print debugStr;
-         RETN {state = state, stack = stack}
+         STEP @@ RETN retn
        end
+
      | (_, SEQ (mtac1, mtac2)) =>
-       MULTI {multitactic = mtac1, state = state, stack = MTAC mtac2 :: stack}
+       STEP o MULTI @@
+         {multitactic = mtac1,
+          state = state,
+          stack = MTAC mtac2 :: stack}
+
      | ([], _) =>
-       RETN {state = state, stack = stack}
+       STEP o RETN @@
+         {state = state,
+          stack = stack}
+
      | ((x, cl) :: Psi, ALL tac) =>
-       FOCUS {tactic = tac, goal = cl, stack = AWAIT (x, ALL tac, Psi \ evd) :: stack}
+       STEP o FOCUS @@
+         {tactic = tac,
+          goal = cl,
+          stack = AWAIT (x, ALL tac, Psi \ evd) :: stack}
+
      | (_, EACH []) =>
-       RETN {state = state, stack = stack}
+       STEP o RETN @@
+         {state = state,
+          stack = stack}
+
      | ((x, cl) :: Psi, EACH (tac :: tacs)) =>
-       FOCUS {tactic = tac, goal = cl, stack = AWAIT (x, EACH tacs, Psi \ evd) :: stack}
+       STEP o FOCUS @@
+         {tactic = tac,
+          goal = cl,
+          stack = AWAIT (x, EACH tacs, Psi \ evd) :: stack}
+
      | (_, ORELSE (mtac1, mtac2)) => 
-       MULTI {multitactic = mtac1, state = state, stack = HANDLE multi :: stack}
+       STEP o MULTI @@
+         {multitactic = mtac1, 
+          state = state,
+          stack = HANDLE multi :: stack}
 
   val step : machine -> machine step = 
-    fn FOCUS foc => STEP (stepFocus foc)
-     | MULTI multi => STEP (stepMulti multi)
+    fn FOCUS foc => stepFocus foc
+     | MULTI multi => stepMulti multi
      | THROW throw => stepThrow throw
      | RETN retn => stepRetn retn
 
