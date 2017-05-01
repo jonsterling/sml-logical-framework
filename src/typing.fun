@@ -237,7 +237,7 @@ struct
       case eval [infGoal, retGoal] of 
          (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
        | (_, _, RET rcl) :: _ => rcl
-       | [] => raise Fail "Internal error"
+       | _ => raise Fail "Internal error"
     end
 
   structure LfExn = LfExnUtil (LfExn)
