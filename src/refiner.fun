@@ -64,15 +64,21 @@ struct
 
   open Lf infix \ \\ `@ ==> -->
 
+  fun mapSnd f (x, y) =
+    (x, f y)
+
   fun cookGoal (Psi \ rcl) = 
     Psi --> rcl
 
-  fun cookGoals Psi = 
-    List.map (fn (x, goal) => (x, cookGoal goal)) Psi
+  val cookGoals = 
+    List.map (mapSnd cookGoal)
 
-  (* TODO: correct *)
   fun substGoal rho (Psi \ rclass) = 
-    Psi \ SubstN.rclass rho rclass
+    let
+      val rho' = List.foldr (fn ((x, _), rho) => Sym.Env.remove rho x) rho Psi
+    in
+      Psi \ SubstN.rclass rho' rclass
+    end
 
   structure Print = 
   struct
