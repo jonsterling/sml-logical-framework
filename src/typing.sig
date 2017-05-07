@@ -3,10 +3,17 @@ sig
   include LF_SYNTAX
   structure LfExn : LF_EXN_UTIL
 
-  (* typing judgments *)
-  val okCl : ctx -> class -> unit
-  val chk : ctx -> ntm -> class -> unit
-  val inf : ctx -> rtm -> rclass
-  val chkSp : ctx -> spine -> ctx -> unit
-  val ctx : ctx -> ctx -> unit
+  structure Inf :
+  sig
+    val var : ctx -> var -> class
+    val rtm : ctx -> rtm -> rclass
+  end
+
+  structure Chk : 
+  sig
+    val class : ctx -> class -> unit
+    val ntm : ctx -> ntm -> class -> unit
+    val spine : ctx -> spine -> ctx -> unit
+    val ctx : ctx -> ctx -> unit
+  end
 end

@@ -209,36 +209,47 @@ struct
   fun init jdg = [(Sym.new (), [], PUSH jdg)]
   val run = eval o init
 
-  fun okCl Gamma cl = 
-    case run @@ OK_CLASS (Gamma, cl) of 
-       (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
-     | _ => ()
+  structure Chk = 
+  struct
+    fun class Gamma cl = 
+      case run @@ OK_CLASS (Gamma, cl) of 
+        (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
+      | _ => ()
 
-  fun ctx Gamma Psi = 
-    case run @@ CTX (Gamma, Psi)  of
-       (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
-     | _ => ()
+    fun ctx Gamma Psi = 
+      case run @@ CTX (Gamma, Psi)  of
+        (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
+      | _ => ()
 
-  fun chk Gamma n cl = 
-    case run @@ CHK (Gamma, n, cl) of 
-       (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
-     | _ => ()
+    fun ntm Gamma n cl = 
+      case run @@ CHK (Gamma, n, cl) of 
+        (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
+      | _ => ()
 
-  fun chkSp Gamma sp Psi = 
-    case run @@ CHK_SP (Gamma, sp, Psi) of 
-       (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
-     | _ => ()
+    fun spine Gamma sp Psi = 
+      case run @@ CHK_SP (Gamma, sp, Psi) of 
+        (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
+      | _ => ()
+  end
 
-  fun inf Gamma r = 
-    let
-      val infGoal = (Sym.new (), [], PUSH (INF (Gamma, r)))
-      val retGoal = (Sym.new (), [], RET (` (#1 infGoal `@ [])))
-    in
-      case eval [infGoal, retGoal] of 
-         (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
-       | (_, _, RET rcl) :: _ => rcl
-       | _ => raise Fail "Internal error"
-    end
+  structure Inf = 
+  struct
+    fun rtm Gamma r = 
+      let
+        val infGoal = (Sym.new (), [], PUSH (INF (Gamma, r)))
+        val retGoal = (Sym.new (), [], RET (` (#1 infGoal `@ [])))
+      in
+        case eval [infGoal, retGoal] of 
+          (_, hist, THROW err) :: _ => raise LfExn.LfExn (err, hist)
+        | (_, _, RET rcl) :: _ => rcl
+        | _ => raise Fail "Internal error"
+      end
+
+    fun var Gamma x = 
+      case findVar Gamma x of 
+        SOME cl => cl
+      | NONE => raise LfExn.LfExn (MISSING_VARIABLE {var = x, ctx = Gamma}, [])
+  end
 
   structure LfExn = LfExnUtil (LfExn)
 end
