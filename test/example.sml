@@ -52,12 +52,12 @@ struct
   structure Rules = 
   struct
     structure Lf = TinyLf
-    datatype rule = NAT_Z | NAT_S | ARR_I | HYP of int
+    datatype rule = NAT_Z | NAT_S | ARR_I of Lf.var | HYP of Lf.var
     val printRule = 
       fn NAT_Z => "nat/z"
        | NAT_S => "nat/s"
-       | ARR_I => "arr/i"
-       | HYP x => "hyp[" ^ Int.toString x ^ "]"
+       | ARR_I x => "arr/i[" ^ Lf.Sym.toString x ^ "]"
+       | HYP x => "hyp[" ^ Lf.Sym.toString x ^ "]"
 
     type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
     type state = (Lf.var * goal, Lf.ntm) Lf.bind 
@@ -69,51 +69,50 @@ struct
         H @ Psi \ rcl
       end
 
-    fun Hyp (i : int) ((H \ rcl) : goal) : state = 
+    fun Hyp (z  : var) (H \ rcl) = 
       let
-        val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
+        val hypcl = Inf.var H z
         val Psi \ rcl' = Unbind.class hypcl
-        val Psi' : (var * goal) list = List.map (fn (x, cl : class) => (x, prependHyps H cl)) Psi
+        val Psi' = map (fn (x, cl : class) => (x, prependHyps H cl)) Psi
         val true = Eq.rclass (rcl, rcl')
       in
-        Psi' \ List.map #1 H \\ z `@ List.map (fn (x, H \ rcl) => eta (x, H --> rcl)) Psi'
+        Psi' \ map #1 H \\ z `@ map (fn (x, H \ rcl) => eta (x, H --> rcl)) Psi'
       end
 
-    fun NatZ (H \ `inh : goal) : state =
+    fun NatZ (H \ `inh) =
       let
         val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
-        val xs = List.map #1 H
+        val xs = map #1 (H : ctx)
       in
         [] \ xs \\ Ze
       end
 
-    fun NatS (H \ `inh : goal) : state =
+    fun NatS (H \ `inh) : state =
       let
         val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
         val X = Sym.named "X"
         val Psi = [(X, H \ `(Inh Nat))]
       in
-        Psi \ List.map #1 H \\ Su (X `@ List.map eta H)
+        Psi \ map #1 H \\ Su (X `@ map eta H)
       end
 
-    fun ArrI (H \ `inh : goal) : state =
+    fun ArrI x (H \ `inh) : state =
       let
         val C Sg.INH `@ [[] \ arr] = Unbind.rtm inh
         val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
 
         val X = Sym.named "X"
-        val x = Sym.named "x"
 
         val Hx = H @ [(x, [] ==> `(Inh tyA))]
         val Psi = [(X, Hx \ `(Inh tyB))]
       in
-        Psi \ List.map #1 H \\ Lam (x, X `@ List.map eta Hx)
+        Psi \ map #1 H \\ Lam (x, X `@ map eta Hx)
       end
 
     val rule = 
       fn NAT_Z => NatZ 
        | NAT_S => NatS
-       | ARR_I => ArrI
+       | ARR_I x => ArrI x
        | HYP x => Hyp x
   end
 
@@ -124,14 +123,15 @@ struct
       open Refiner Rules
       val sequence = List.foldr SEQ (EACH [])
 
+      val x = Sym.named "welp"
       val script =
         sequence
           [DEBUG "start",
-           ALL (RULE ARR_I),
+           ALL (RULE (ARR_I x)),
            DEBUG "arr/i",
            ALL (RULE NAT_S),
            DEBUG "nat/s",
-           ALL (RULE (HYP 0)),
+           ALL (RULE (HYP x)),
            DEBUG "hyp"]
 
       val goal = [] \ `(Inh (Arr (Nat, Nat)))
