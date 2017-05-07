@@ -103,7 +103,7 @@ struct
     val instr = 
       fn MTAC mtac => "{" ^ multitactic mtac ^ "}"
        | AWAIT (x, mtac, st) => "await[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
-       (*| PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"*)
+       | PREPEND Psi => "prepend{" ^ Print.ctx (cookGoals Psi) ^ "}"
        | HANDLE _ => "handler"
 
     fun stack stk = 
