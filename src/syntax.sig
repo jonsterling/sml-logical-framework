@@ -9,10 +9,12 @@ sig
   type class (* general classifiers *)
   type ctx = (var * class) list
 
-  datatype rclass = ` of rtm  | TYPE (* atomic classifiers *)
-  and rtm = `@ of var * ntm list (* atomic terms *)
+  datatype ('v, 'a) app = `@ of 'v * 'a list
+  datatype ('a, 'b) bind = \ of 'a list * 'b
 
-  datatype ('a, 'b) binder = \ of 'a list * 'b
+  type rtm = (var, ntm) app (* atomic terms *)
+
+  datatype rclass = ` of rtm  | TYPE (* atomic classifiers *)
 
   val \\ : var list * rtm -> ntm
   val --> : ctx * rclass -> class
@@ -22,8 +24,9 @@ sig
 
   structure Unbind :
   sig
-    val ntm : ntm -> (var, rtm) binder
-    val class : class -> (var * class, rclass) binder
+    val ntm : ntm -> (var, rtm) bind
+    val rtm : rtm -> (var, (var, rtm) bind) app
+    val class : class -> (var * class, rclass) bind
   end
 
   (* alpha equivalence *)
@@ -67,7 +70,7 @@ sig
 
   structure SubstRcl :
   sig
-    type subst = (var, rclass) binder env
+    type subst = (var, rclass) bind env
     val rclass : subst -> rclass -> rclass
     val class : subst -> class -> class
     val rtm : subst -> rtm -> rtm

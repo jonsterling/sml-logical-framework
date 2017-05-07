@@ -3,7 +3,7 @@ sig
   structure Lf : LF_TYPING
 
   type rule
-  type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
+  type state = (Lf.var * Lf.class, Lf.ntm) Lf.bind
 
   val rule : rule -> Lf.class -> state
   val printRule : rule -> string

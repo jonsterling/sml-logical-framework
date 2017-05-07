@@ -6,14 +6,16 @@ struct
   type var = Sym.symbol
   type 'a env = 'a Sym.Env.dict
 
+  datatype ('v, 'a) app = `@ of 'v * 'a list
+
   (* atomic classifiers *)
   datatype rclass =
      ` of rtm
    | TYPE
-  and rtm = `@ of var * ntm list
-  and ('a, 'b) binder = \ of 'a list * 'b
-  and class = PI of (var * class, rclass) binder
-  withtype ntm = (var, rtm) binder
+  and ('a, 'b) bind = \ of 'a list * 'b
+  and class = PI of (var * class, rclass) bind
+  and ntm = LAM of (var, rtm) bind
+  withtype rtm = (var, ntm) app
 
   type spine = ntm list
   type ctx = (var * class) list
@@ -48,8 +50,8 @@ struct
     and rtm rho (x `@ sp)  =
       lookupVar rho x `@ spine rho sp
     and spine rho = List.map (ntm rho)
-    and ntm rho (xs \ r) =
-      xs \ rtm (List.foldl (fn (x, rho) => Sym.Env.remove rho x) rho xs) r
+    and ntm rho (LAM (xs \ r)) =
+      LAM (xs \ rtm (List.foldl (fn (x, rho) => Sym.Env.remove rho x) rho xs) r)
     and ctx rho Psi =
       let
         fun go rho [] Psi = (rho, Psi)
@@ -73,7 +75,7 @@ struct
   end
 
   fun xs \\ r = 
-    xs \ r
+    LAM (xs \ r)
 
   fun Psi --> rcl = 
     PI (Psi \ rcl)
@@ -83,7 +85,7 @@ struct
 
   structure Unbind = 
   struct
-    fun ntm (xs \ r) = 
+    fun ntm (LAM (xs \ r)) = 
       let
         val xs' = List.map (Sym.named o Sym.name) xs
         val rho = ListPair.foldr (fn (x, x', rho) => Sym.Env.insert rho x x') Sym.Env.empty (xs, xs')
@@ -91,6 +93,9 @@ struct
       in
         xs' \ r'
       end
+
+    fun rtm (x `@ ns) = 
+      x `@ List.map ntm ns
 
     fun class (PI (Psi \ rcl)) = 
       let
@@ -164,7 +169,7 @@ struct
              andalso spineAux env (sp1', sp2')
        | _ => false
 
-    and ntmAux env (xs1 \ r1, xs2 \ r2) =
+    and ntmAux env (LAM (xs1 \ r1), LAM (xs2 \ r2)) =
       rtmAux
         (unifyBinders env (xs1, xs2))
         (r1, r2)
@@ -201,17 +206,17 @@ struct
         val sp' = spine rho sp
       in
         case Sym.Env.find rho x of
-           SOME (xs \ r) => rtm (zipSpine (xs, sp')) r
+           SOME (LAM (xs \ r)) => rtm (zipSpine (xs, sp')) r
          | NONE => x `@ sp'
       end
-    and ntm rho (xs \ r) =
-      xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
+    and ntm rho (LAM (xs \ r)) =
+      LAM (xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r)
     and spine rho = List.map (ntm rho)
   end
 
   structure SubstRcl =
   struct
-    type subst = (var, rclass) binder env
+    type subst = (var, rclass) bind env
 
     fun class rho (PI (Psi \ rcl)) =
       PI (ctx rho Psi \ rclass rho rcl)
@@ -236,8 +241,8 @@ struct
         (* Is this correct? *)
         (x `@ sp')
       end
-    and ntm rho (xs \ r) =
-      xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r
+    and ntm rho (LAM (xs \ r)) =
+      LAM (xs \ rtm (List.foldl (fn (x, rho') => Sym.Env.remove rho' x) rho xs) r)
     and spine rho = List.map (ntm rho)
   end
 
@@ -279,7 +284,7 @@ struct
        | n :: [] => ntm n
        | n :: sp => ntm n ^ "," ^ spine sp
 
-    and ntm (xs \ r) =
+    and ntm (LAM (xs \ r)) =
       case xs of
          [] => rtm r
        | _ =>  "[" ^ vars xs ^ "]" ^ rtm r

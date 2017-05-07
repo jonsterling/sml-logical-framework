@@ -59,14 +59,14 @@ struct
        | ARR_I => "arr/i"
        | HYP x => "hyp[" ^ Int.toString x ^ "]"
 
-    type state = (Lf.var * Lf.class, Lf.ntm) Lf.binder
+    type state = (Lf.var * Lf.class, Lf.ntm) Lf.bind
 
     fun destInh goal = 
       let
-        val H \ `(C Sg.INH `@ [ty]) = Unbind.class goal
-        val [] \ ty = Unbind.ntm ty
+        val H \ `inh = Unbind.class goal
+        val C Sg.INH `@ [[] \ ty] = Unbind.rtm inh
       in
-        H \ ty
+        H \ Unbind.rtm ty
       end
 
     fun prependHyps H cl = 
@@ -97,7 +97,7 @@ struct
 
     fun NatS goal =
       let
-        val H \ (C Sg.NAT `@ []) = destInh goal
+        val H \ C Sg.NAT `@ [] = destInh goal
         val X = Sym.named "X"
         val Psi = [(X, H --> `(Inh Nat))]
       in
@@ -106,9 +106,7 @@ struct
 
     fun ArrI goal =
       let
-        val H \ (C Sg.ARR `@ [tyA, tyB]) = destInh goal
-        val [] \ tyA = Unbind.ntm tyA
-        val [] \ tyB = Unbind.ntm tyB
+        val H \ C Sg.ARR `@ [[] \ tyA, [] \ tyB] = destInh goal
 
         val X = Sym.named "X"
         val x = Sym.named "x"
