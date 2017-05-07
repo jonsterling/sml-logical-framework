@@ -92,7 +92,7 @@ struct
         val H \ C Sg.NAT `@ [] = destInh goal
         val xs = List.map #1 H
       in
-        [] \ (xs \\ Ze)
+        [] \ xs \\ Ze
       end
 
     fun NatS goal =
