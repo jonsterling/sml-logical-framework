@@ -8,6 +8,8 @@ struct
 
   exception todo fun ?e = raise e
 
+  type names = int Lf.Sym.Env.dict
+
   datatype tactic =
      RULE of rule
    | MT of multitactic
@@ -28,15 +30,15 @@ struct
   datatype instr =
      MTAC of multitactic
    | AWAIT of Lf.var * multitactic * state
-   | PREPEND of Lf.ctx
+   | PREPEND of (Lf.var * goal) list
    | HANDLE of machine_multi
 
   withtype stack = instr list
 
-  and machine_focus = {tactic: tactic, goal: Lf.class, stack: stack}
+  and machine_focus = {tactic: tactic, goal: goal, stack: stack}
   and machine_multi = {multitactic: multitactic, state: state, stack: stack}
   and machine_retn = {state: state, stack: stack}
-  and machine_throw = {exn: exn, goal: Lf.class, trace: stack, stack: stack} 
+  and machine_throw = {exn: exn, goal: goal, trace: stack, stack: stack} 
 
   (* The refinement machine has four execution states:
        1. Executing a tactic on a focused goal
@@ -60,7 +62,17 @@ struct
        goal = goal,
        stack = []}
 
-  open Lf infix \ \\ `@ ==>
+  open Lf infix \ \\ `@ ==> -->
+
+  fun cookGoal (Psi \ rcl) = 
+    Psi --> rcl
+
+  fun cookGoals Psi = 
+    List.map (fn (x, goal) => (x, cookGoal goal)) Psi
+
+  (* TODO: correct *)
+  fun substGoal rho (Psi \ rclass) = 
+    Psi \ SubstN.rclass rho rclass
 
   structure Print = 
   struct
@@ -84,14 +96,14 @@ struct
        | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
     
     fun state (Psi \ evd) = 
-      Print.ctx Psi 
-        ^ "\n   ===>  " 
+      Print.ctx (cookGoals Psi)
+        ^ "\n   ===>  "
         ^ Print.ntm evd
 
     val instr = 
       fn MTAC mtac => "{" ^ multitactic mtac ^ "}"
        | AWAIT (x, mtac, st) => "await[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
-       | PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"
+       (*| PREPEND Psi => "prepend{" ^ Print.ctx Psi ^ "}"*)
        | HANDLE _ => "handler"
 
     fun stack stk = 
@@ -114,11 +126,11 @@ struct
         ^ Print.stack (List.rev stack)
   end
 
-  fun goalToState (goal : class) : state  = 
+  fun goalToState (goal : goal) : state  = 
     let
       val x = Sym.new ()
     in
-      [(x, goal)] \ eta (x, goal)
+      [(x, goal)] \ eta (x, cookGoal goal)
     end
 
   fun stepFocus {tactic, goal, stack} : machine step = 
@@ -148,7 +160,7 @@ struct
      | AWAIT (x, mtac, Psi' \ evd') :: stk =>
        let
          val rhox = Sym.Env.singleton x evd
-         val Psi'' = SubstN.ctx rhox Psi'
+         val Psi'' = List.map (fn (X, goal) => (X, substGoal rhox goal)) Psi'
          val evd'' = SubstN.ntm rhox evd'
        in
          STEP o MULTI @@
@@ -171,7 +183,7 @@ struct
 
   fun stepThrow {exn, goal, trace, stack} : machine step =
     case stack of 
-       [] => raise Exn.Refine (exn, goal, trace)
+       [] => raise Exn.Refine (exn, cookGoal goal, trace)
      | HANDLE multi :: stk => STEP @@ MULTI multi
      | instr :: stk =>
          STEP o THROW @@

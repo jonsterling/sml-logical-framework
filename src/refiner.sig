@@ -3,9 +3,10 @@ sig
   structure Lf : LF_TYPING
 
   type rule
-  type state = (Lf.var * Lf.class, Lf.ntm) Lf.bind
+  type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
+  type state = (Lf.var * goal, Lf.ntm) Lf.bind
 
-  val rule : rule -> Lf.class -> state
+  val rule : rule -> goal -> state
   val printRule : rule -> string
 end
 
@@ -35,6 +36,6 @@ sig
   end
 
   type machine
-  val init : tactic -> Rules.Lf.class -> machine
+  val init : tactic -> Rules.goal -> machine
   val eval : machine -> Rules.state
 end

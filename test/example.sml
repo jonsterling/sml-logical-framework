@@ -59,60 +59,53 @@ struct
        | ARR_I => "arr/i"
        | HYP x => "hyp[" ^ Int.toString x ^ "]"
 
-    type state = (Lf.var * Lf.class, Lf.ntm) Lf.bind
+    type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
+    type state = (Lf.var * goal, Lf.ntm) Lf.bind 
 
-    fun destInh goal = 
-      let
-        val H \ `inh = Unbind.class goal
-        val C Sg.INH `@ [[] \ ty] = Unbind.rtm inh
-      in
-        H \ Unbind.rtm ty
-      end
-
-    fun prependHyps H cl = 
+   fun prependHyps (H : ctx) (cl : class) : goal = 
       let
         val Psi \ rcl = Unbind.class cl
       in
-        H @ Psi --> rcl
+        H @ Psi \ rcl
       end
 
-    fun Hyp (i : int) goal = 
+    fun Hyp (i : int) ((H \ rcl) : goal) : state = 
       let
-        val H \ rcl = Unbind.class goal
         val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
         val Psi \ rcl' = Unbind.class hypcl
-        val Psi' = List.map (fn (x, cl) => (x, prependHyps H cl)) Psi
+        val Psi' : (var * goal) list = List.map (fn (x, cl : class) => (x, prependHyps H cl)) Psi
         val true = Eq.rclass (rcl, rcl')
       in
-        Psi' \ List.map #1 H \\ z `@ List.map eta Psi'
+        Psi' \ List.map #1 H \\ z `@ List.map (fn (x, H \ rcl) => eta (x, H --> rcl)) Psi'
       end
 
-    fun NatZ goal =
+    fun NatZ (H \ `inh : goal) : state =
       let
-        val H \ C Sg.NAT `@ [] = destInh goal
+        val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
         val xs = List.map #1 H
       in
         [] \ xs \\ Ze
       end
 
-    fun NatS goal =
+    fun NatS (H \ `inh : goal) : state =
       let
-        val H \ C Sg.NAT `@ [] = destInh goal
+        val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
         val X = Sym.named "X"
-        val Psi = [(X, H --> `(Inh Nat))]
+        val Psi = [(X, H \ `(Inh Nat))]
       in
         Psi \ List.map #1 H \\ Su (X `@ List.map eta H)
       end
 
-    fun ArrI goal =
+    fun ArrI (H \ `inh : goal) : state =
       let
-        val H \ C Sg.ARR `@ [[] \ tyA, [] \ tyB] = destInh goal
+        val C Sg.INH `@ [[] \ arr] = Unbind.rtm inh
+        val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
 
         val X = Sym.named "X"
         val x = Sym.named "x"
 
         val Hx = H @ [(x, [] ==> `(Inh tyA))]
-        val Psi = [(X, Hx --> `(Inh tyB))]
+        val Psi = [(X, Hx \ `(Inh tyB))]
       in
         Psi \ List.map #1 H \\ Lam (x, X `@ List.map eta Hx)
       end
@@ -141,7 +134,7 @@ struct
            ALL (RULE (HYP 0)),
            DEBUG "hyp"]
 
-      val goal = [] ==> `(Inh (Arr (Nat, Nat)))
+      val goal = [] \ `(Inh (Arr (Nat, Nat)))
       val machine = init (MT script) goal
     in
       eval machine
