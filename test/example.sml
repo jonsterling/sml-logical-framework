@@ -146,6 +146,9 @@ struct
 
   structure Refiner = LfRefiner (Rules)
 
+  fun runMachine {script, goal} = 
+    Refiner.eval (Refiner.init (Refiner.MT script) goal)
+
   fun test () = 
     let
       open Refiner Rules
@@ -174,13 +177,32 @@ struct
                 EACH (map (fn (xs \ r) => MT (xs >>> elaborate r)) bs)]
 
       val x = Sym.named "my-var"
-      val term = Lam (x, Su (Su (x `@ [])))
-      val script = elaborate term
-      val script' = SEQ (DEBUG "start", [Sym.named "hello", Sym.named "world"] >>> script)
-      val goal = [] \ `(Inh (Arr (Nat, Nat)))
-      val machine = init (MT script') goal
+      val f = Sym.named "f"
+
+      val testElaborate = 
+        {goal = [] \ `(Inh (Arr (Nat, Nat))),
+         script = elaborate (Lam (x, Su (Su (x `@ []))))}
+
+      val testFunSplit = 
+        {goal = [] \ `(Inh (Arr (Arr (Nat, Nat), Nat))),
+         script = 
+           [x,f] >>> sequence 
+            [DEBUG "start",
+             ALL (RULE ARR_I),
+             DEBUG "arr/i",
+             ALL (RULE (ARR_E x)),
+             DEBUG "arr/e",
+             ALL (RULE (HYP f)),
+             DEBUG "hyp",
+             ALL (RULE NAT_S),
+             DEBUG "su",
+             ALL (RULE NAT_Z),
+             DEBUG "ze"]}
     in
-      eval machine
+      print ("TESTING ELABORATION\n---------------------\n");
+      runMachine testElaborate;
+      print ("\n\n\nTESTING FUNSPLIT\n---------------------\n");
+      runMachine testFunSplit
     end
 
   fun debug x = 
