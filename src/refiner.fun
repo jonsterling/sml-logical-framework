@@ -250,7 +250,7 @@ struct
          STEP o RETN @@ 
            {state = state,
             stack = stk,
-            names = List.tl names handle _ => []}
+            names = List.tl names}
 
      | [] => FINAL state
 
