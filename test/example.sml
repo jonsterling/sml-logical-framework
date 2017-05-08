@@ -119,12 +119,14 @@ struct
         val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
 
         val x = Sym.new ()
-        val hypcl' = Psi @ [(x, [] ==> `(Inh tyA))] --> `(Inh tyB)
-        val rhoz = Sym.Env.singleton z (eta (z', hypcl'))
+        val clx = [] ==> `(Inh tyA)
+
+        val z'lam = map #1 Psi \\ Lam (x, z' `@ (map eta Psi @ [eta (x, clx)]))
+        val rhoz = Sym.Env.singleton z z'lam
         val H1' = SubstN.ctx rhoz H1
         val rcl' = SubstN.rclass rhoz rcl
 
-        val H' = H0 @ (z, hypcl) :: (z', hypcl') :: H1'
+        val H' = H0 @ (z, hypcl) :: (z', Psi @ [(x, clx)] --> `(Inh tyB)) :: H1'
 
         val X = Sym.new ()
 
