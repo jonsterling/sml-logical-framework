@@ -99,7 +99,7 @@ struct
 
     fun class (PI (Psi \ rcl)) = 
       let
-        val xs = List.map (Sym.named o Sym.toString o #1) Psi
+        val xs = List.map (Sym.named o Sym.name o #1) Psi
         val (rho, Psi') = Ren.rebindCtx xs Psi
         val rcl' = Ren.rclass rho rcl
       in
@@ -254,8 +254,8 @@ struct
     fun vars xs =
       case xs of
          [] => ""
-       | x :: [] => Sym.toString x
-       | x :: xs => Sym.toString x ^ "," ^ vars xs
+       | x :: [] => var x
+       | x :: xs => var x ^ "," ^ vars xs
 
     fun class (PI (Psi \ rcl)) =
       case Psi of
@@ -265,8 +265,8 @@ struct
     and ctx Psi =
       case Psi of
          [] => "-"
-       | (x, cl) :: [] => Sym.toString x ^ ":" ^ class cl
-       | (x, cl) :: Psi' => Sym.toString x ^ ":" ^ class cl ^ ", " ^ ctx Psi'
+       | (x, cl) :: [] => var x ^ ":" ^ class cl
+       | (x, cl) :: Psi' => var x ^ ":" ^ class cl ^ ", " ^ ctx Psi'
 
     and rclass rcl =
       case rcl of
@@ -275,8 +275,8 @@ struct
 
     and rtm (x `@ sp) =
       case sp of
-         [] => Sym.toString x
-       | _ => Sym.toString x ^ "[" ^ spine sp ^ "]"
+         [] => var x
+       | _ => var x ^ "[" ^ spine sp ^ "]"
 
     and spine sp =
       case sp of
