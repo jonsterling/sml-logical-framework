@@ -13,12 +13,14 @@ struct
     end
 
   fun new () = 
-    named "?"
+    named ""
 
-  fun toString (a, i) = 
-    a ^ Int.toString i
+  fun name (a, i) =
+    case a of 
+       "" => "?" ^ Int.toString i
+     | _ => a
 
-  fun name (a, i) = a
+  val toString = name
 
   structure Key =
   struct
