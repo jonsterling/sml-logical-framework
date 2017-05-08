@@ -101,12 +101,13 @@ struct
       Psi'' \ Ren.rclass rho' rcl'
     end
 
-  (* TODO: handle binding in goal telescope properly *)
   fun substState rho (Psi \ evd : state) = 
     let
-      val Psi' = map (mapSnd (substGoal rho)) Psi
+      val rho' = List.foldr (fn ((x, _), rho) => Sym.Env.remove rho x) rho Psi
+      val Psi' = map (mapSnd (substGoal rho')) Psi
+      val evd' = SubstN.ntm rho' evd
     in
-      Psi' \ SubstN.ntm rho evd
+      Psi' \ evd'
     end
 
   fun renState rho (Psi \ evd) = 
