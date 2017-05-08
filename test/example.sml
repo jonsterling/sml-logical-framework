@@ -138,7 +138,12 @@ struct
            C Sg.LAM `@ [[x] \ r] => [x] >>> sequence [ALL (RULE ARR_I), DEBUG "lam", elaborate r]
          | C Sg.ZE `@ [] => sequence [ALL (RULE NAT_Z), DEBUG "nat/z"]
          | C Sg.SU `@ [[] \ r] => sequence [ALL (RULE NAT_S), DEBUG "nat/s", elaborate r]
-         | (x as I _) `@ [] => sequence [ALL (RULE (HYP x)), DEBUG "hyp"]
+           (* A fancy elaboration rule which accounts for higher-order hypotheses! Useful in case of funsplit, etc.: *)
+         | (x as I _) `@ bs =>
+             sequence
+               [ALL (RULE (HYP x)), 
+                DEBUG "hyp", 
+                EACH (map (fn (xs \ r) => MT (xs >>> elaborate r)) bs)]
 
       val x = Sym.named "my-var"
       val term = Lam (x, Su (Su (x `@ [])))
