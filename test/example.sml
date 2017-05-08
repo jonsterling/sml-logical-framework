@@ -60,7 +60,6 @@ struct
 
     type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
     type state = (Lf.var * goal, Lf.ntm) Lf.bind 
-    type names = unit -> Lf.var
 
 
    fun prependHyps (H : ctx) (cl : class) : goal = 
