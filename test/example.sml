@@ -48,79 +48,72 @@ struct
      (C Sg.SU, [[] ==> `Exp] ==> `Exp),
      (C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> `Exp)]
 
-
   structure Rules = 
   struct
     structure Lf = TinyLf
-    datatype rule = NAT_Z | NAT_S | ARR_I | HYP of int
+    datatype rule = NAT_Z | NAT_S | ARR_I | HYP of Lf.var
     val printRule = 
       fn NAT_Z => "nat/z"
        | NAT_S => "nat/s"
        | ARR_I => "arr/i"
-       | HYP x => "hyp[" ^ Int.toString x ^ "]"
+       | HYP x => "hyp[" ^ Lf.Sym.toString x ^ "]"
 
-    type state = (Lf.var * Lf.class, Lf.ntm) Lf.bind
+    type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
+    type state = (Lf.var * goal, Lf.ntm) Lf.bind 
+    type names = unit -> Lf.var
 
-    fun destInh goal = 
-      let
-        val H \ `inh = Unbind.class goal
-        val C Sg.INH `@ [[] \ ty] = Unbind.rtm inh
-      in
-        H \ Unbind.rtm ty
-      end
 
-    fun prependHyps H cl = 
+   fun prependHyps (H : ctx) (cl : class) : goal = 
       let
         val Psi \ rcl = Unbind.class cl
       in
-        H @ Psi --> rcl
+        H @ Psi \ rcl
       end
 
-    fun Hyp (i : int) goal = 
+    fun Hyp (z  : var) (H \ rcl) = 
       let
-        val H \ rcl = Unbind.class goal
-        val hyp as (z, hypcl) = List.nth (H, List.length H - 1 - i)
+        val hypcl = Inf.var H z
         val Psi \ rcl' = Unbind.class hypcl
-        val Psi' = List.map (fn (x, cl) => (x, prependHyps H cl)) Psi
+        val Psi' = map (fn (x, cl : class) => (x, prependHyps H cl)) Psi
         val true = Eq.rclass (rcl, rcl')
       in
-        Psi' \ List.map #1 H \\ z `@ List.map eta Psi'
+        Psi' \ map #1 H \\ z `@ map (fn (x, H \ rcl) => eta (x, H --> rcl)) Psi'
       end
 
-    fun NatZ goal =
+    fun NatZ (H \ `inh) =
       let
-        val H \ C Sg.NAT `@ [] = destInh goal
-        val xs = List.map #1 H
+        val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
+        val xs = map #1 (H : ctx)
       in
         [] \ xs \\ Ze
       end
 
-    fun NatS goal =
+    fun NatS (H \ `inh) =
       let
-        val H \ C Sg.NAT `@ [] = destInh goal
-        val X = Sym.named "X"
-        val Psi = [(X, H --> `(Inh Nat))]
+        val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
+        val X = Sym.new ()
+        val Psi = [(X, H \ `(Inh Nat))]
       in
-        Psi \ List.map #1 H \\ Su (X `@ List.map eta H)
+        Psi \ map #1 H \\ Su (X `@ map eta H)
       end
 
-    fun ArrI goal =
+    fun ArrI x (H \ `inh) =
       let
-        val H \ C Sg.ARR `@ [[] \ tyA, [] \ tyB] = destInh goal
+        val C Sg.INH `@ [[] \ arr] = Unbind.rtm inh
+        val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
 
-        val X = Sym.named "X"
-        val x = Sym.named "x"
+        val X = Sym.new ()
 
         val Hx = H @ [(x, [] ==> `(Inh tyA))]
-        val Psi = [(X, Hx --> `(Inh tyB))]
+        val Psi = [(X, Hx \ `(Inh tyB))]
       in
-        Psi \ List.map #1 H \\ Lam (x, X `@ List.map eta Hx)
+        Psi \ map #1 H \\ Lam (x, X `@ map eta Hx)
       end
 
-    val rule = 
-      fn NAT_Z => NatZ 
+    fun rule fresh = 
+      fn NAT_Z => NatZ
        | NAT_S => NatS
-       | ARR_I => ArrI
+       | ARR_I => ArrI (fresh ())
        | HYP x => Hyp x
   end
 
@@ -129,19 +122,33 @@ struct
   fun test () = 
     let
       open Refiner Rules
+
+      (* SEQ is to THEN as kleisli composition is to kleisli extension. *)
       val sequence = List.foldr SEQ (EACH [])
 
-      val script =
-        sequence
-          [DEBUG "start",
-           ALL (RULE ARR_I),
-           DEBUG "arr/i",
-           ALL (RULE NAT_S),
-           DEBUG "nat/s",
-           ALL (RULE (HYP 0)),
-           DEBUG "hyp"]
+      (* BIND pushes a block of user-chosen names for part of a tactic script; when the 
+         sub-script is finished, this block will be popped. Tactics can eat names from outer 
+         blocks. *)
+      val >>> = BIND
+      infix >>>
 
-      val goal = [] ==> `(Inh (Arr (Nat, Nat)))
+      val x = Sym.named "my-var"
+
+      (* In the following script, we demonstrate sequencing, dynamic name binding, and debugging. 
+         DEBUG prints out the state of the refinement machine at the point where it is executed. *)
+      val script =
+        sequence 
+          [DEBUG "start", [x] >>>
+            sequence
+              [DEBUG "start",
+               ALL (RULE ARR_I), (* observe that 'x' is chosen, because we've pushed it into scope *)
+               DEBUG "arr/i",
+               ALL (RULE NAT_S),
+               DEBUG "nat/s",
+               ALL (RULE (HYP x)),
+               DEBUG "hyp"]]
+
+      val goal = [] \ `(Inh (Arr (Nat, Nat)))
       val machine = init (MT script) goal
     in
       eval machine
