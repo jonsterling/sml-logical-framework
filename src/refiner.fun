@@ -119,6 +119,12 @@ struct
 
   structure Print = 
   struct
+    fun vars xs = 
+      case xs of
+         [] => ""
+       | [x] => Sym.toString x
+       | x :: xs => Sym.toString x ^ "," ^ vars xs
+
     fun tactic tac = 
       case tac of 
          RULE rl => printRule rl
@@ -131,7 +137,7 @@ struct
        | DEBUG msg => "debug(\"" ^ msg ^ "\")"
        | SEQ (mtac1, mtac2) => multitactic mtac1 ^ "; " ^ multitactic mtac2
        | ORELSE (mtac1, mtac2) => "{" ^ multitactic mtac1 ^ "} | {" ^ multitactic mtac2 ^ "}"
-       | BIND (xs, mtac) => multitactic mtac (* TODO *)
+       | BIND (xs, mtac) => "[" ^ vars xs ^ "] <- {" ^ multitactic mtac ^ "}"
 
     and tactics tacs = 
       case tacs of 

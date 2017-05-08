@@ -126,17 +126,21 @@ struct
       val >>> = BIND
       infix >>>
 
-      val x = Sym.named "xwelp"
+      val ID = EACH []
+
+      val x = Sym.named "my-var"
+
       val script =
-        [x] >>>
-        sequence
-          [DEBUG "start",
-           ALL (RULE ARR_I),
-           DEBUG "arr/i",
-           ALL (RULE NAT_S),
-           DEBUG "nat/s",
-           ALL (RULE (HYP x)),
-           DEBUG "hyp"]
+        sequence 
+          [DEBUG "start", [x] >>>
+            sequence
+              [DEBUG "start",
+               ALL (RULE ARR_I),
+               DEBUG "arr/i",
+               ALL (RULE NAT_S),
+               DEBUG "nat/s",
+               ALL (RULE (HYP x)),
+               DEBUG "hyp"]]
 
       val goal = [] \ `(Inh (Arr (Nat, Nat)))
       val machine = init (MT script) goal
