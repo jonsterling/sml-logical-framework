@@ -164,6 +164,11 @@ struct
       val >>> = BIND
       infix >>>
 
+      (* We can elaborate raw terms into proof scripts; here, because typechecking is decidable,
+         these proof scripts have exactly the same structure as the lambda terms. But something
+         like CTT, these elaborated scripts would leave holds (i.e. identity tactics) in certain 
+         places, allowing the user to fill in the details. *)
+
       fun elaborate r = 
         case Unbind.rtm r of 
            C Sg.LAM `@ [[x] \ r] => [x] >>> sequence [ALL (RULE ARR_I), DEBUG "lam", elaborate r]
