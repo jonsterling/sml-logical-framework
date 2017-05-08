@@ -125,6 +125,12 @@ struct
        | [x] => Sym.toString x
        | x :: xs => Sym.toString x ^ "," ^ vars xs
 
+    fun nameBlocks blocks =
+      case blocks of
+         [] => ""
+       | [xs] => "[" ^ vars xs ^ "]"
+       | xs :: blocks => "[" ^ vars xs ^ "], " ^ nameBlocks blocks
+
     fun tactic tac = 
       case tac of 
          RULE rl => printRule rl
@@ -278,7 +284,9 @@ struct
       ^ Print.state state
       ^ "\n\nRemaining tasks: \n------------------------------\n"
       ^ Print.stack stack
-      ^ "\n\n"
+      ^ "\n\nName blocks: \n------------------------------\n["
+      ^ Print.nameBlocks names
+      ^ "]\n\n"
 
 
   fun stepMulti (multi as {multitactic, state as Psi \ evd, stack, names}) : machine step =

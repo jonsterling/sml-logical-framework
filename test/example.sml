@@ -123,7 +123,9 @@ struct
       open Refiner Rules
 
       (* SEQ is to THEN as kleisli composition is to kleisli extension. *)
-      val sequence = List.foldr SEQ (EACH [])
+      fun sequence [x] = x
+        | sequence (x :: xs) = SEQ (x, sequence xs)
+        | sequence [] = EACH []
 
       (* BIND pushes a block of user-chosen names for part of a tactic script; when the 
          sub-script is finished, this block will be popped. Tactics can eat names from outer 
@@ -139,7 +141,7 @@ struct
          | (x as I _) `@ [] => sequence [ALL (RULE (HYP x)), DEBUG "hyp"]
 
       val x = Sym.named "my-var"
-      val script = elaborate (Lam (x, Su (x `@ [])))
+      val script = SEQ (DEBUG "start", [Sym.named "hello", Sym.named "world"] >>> elaborate (Lam (x, Su (x `@ []))))
       val goal = [] \ `(Inh (Arr (Nat, Nat)))
       val machine = init (MT script) goal
     in
