@@ -141,9 +141,11 @@ struct
          | (x as I _) `@ [] => sequence [ALL (RULE (HYP x)), DEBUG "hyp"]
 
       val x = Sym.named "my-var"
-      val script = SEQ (DEBUG "start", [Sym.named "hello", Sym.named "world"] >>> elaborate (Lam (x, Su (x `@ []))))
+      val term = Lam (x, Su (Su (x `@ [])))
+      val script = elaborate term
+      val script' = SEQ (DEBUG "start", [Sym.named "hello", Sym.named "world"] >>> script)
       val goal = [] \ `(Inh (Arr (Nat, Nat)))
-      val machine = init (MT script) goal
+      val machine = init (MT script') goal
     in
       eval machine
     end
