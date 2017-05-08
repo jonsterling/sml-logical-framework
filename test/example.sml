@@ -60,7 +60,7 @@ struct
 
     type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
     type state = (Lf.var * goal, Lf.ntm) Lf.bind 
-
+    type names = unit -> Lf.var
 
    fun prependHyps (H : ctx) (cl : class) : goal = 
       let
@@ -131,22 +131,15 @@ struct
       val >>> = BIND
       infix >>>
 
+      fun elaborate r = 
+        case Unbind.rtm r of 
+           C Sg.LAM `@ [[x] \ r] => [x] >>> sequence [ALL (RULE ARR_I), DEBUG "lam", elaborate r]
+         | C Sg.ZE `@ [] => sequence [ALL (RULE NAT_Z), DEBUG "nat/z"]
+         | C Sg.SU `@ [[] \ r] => sequence [ALL (RULE NAT_S), DEBUG "nat/s", elaborate r]
+         | (x as I _) `@ [] => sequence [ALL (RULE (HYP x)), DEBUG "hyp"]
+
       val x = Sym.named "my-var"
-
-      (* In the following script, we demonstrate sequencing, dynamic name binding, and debugging. 
-         DEBUG prints out the state of the refinement machine at the point where it is executed. *)
-      val script =
-        sequence 
-          [DEBUG "start", [x] >>>
-            sequence
-              [DEBUG "start",
-               ALL (RULE ARR_I), (* observe that 'x' is chosen, because we've pushed it into scope *)
-               DEBUG "arr/i",
-               ALL (RULE NAT_S),
-               DEBUG "nat/s",
-               ALL (RULE (HYP x)),
-               DEBUG "hyp"]]
-
+      val script = elaborate (Lam (x, Su (x `@ [])))
       val goal = [] \ `(Inh (Arr (Nat, Nat)))
       val machine = init (MT script) goal
     in
