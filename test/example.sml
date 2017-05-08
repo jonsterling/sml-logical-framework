@@ -122,20 +122,26 @@ struct
   fun test () = 
     let
       open Refiner Rules
+
+      (* SEQ is to THEN as kleisli composition is to kleisli extension. *)
       val sequence = List.foldr SEQ (EACH [])
+
+      (* BIND pushes a block of user-chosen names for part of a tactic script; when the 
+         sub-script is finished, this block will be popped. Tactics can eat names from outer 
+         blocks. *)
       val >>> = BIND
       infix >>>
 
-      val ID = EACH []
-
       val x = Sym.named "my-var"
 
+      (* In the following script, we demonstrate sequencing, dynamic name binding, and debugging. 
+         DEBUG prints out the state of the refinement machine at the point where it is executed. *)
       val script =
         sequence 
           [DEBUG "start", [x] >>>
             sequence
               [DEBUG "start",
-               ALL (RULE ARR_I),
+               ALL (RULE ARR_I), (* observe that 'x' is chosen, because we've pushed it into scope *)
                DEBUG "arr/i",
                ALL (RULE NAT_S),
                DEBUG "nat/s",
