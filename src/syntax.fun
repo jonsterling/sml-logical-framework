@@ -289,4 +289,19 @@ struct
          [] => rtm r
        | _ =>  "[" ^ vars xs ^ "]" ^ rtm r
   end
+
+  structure Ctx = 
+  struct
+    fun splitAux Gamma0 Gamma1 x = 
+      case Gamma1 of 
+         [] => raise Fail "Variable not found"
+       | (y, a) :: Gamma1 => if Sym.eq (x, y) then (Gamma0, a, Gamma1) else splitAux Gamma0 Gamma1 x
+
+    fun split Gamma x = 
+      let
+        val (Gamma0, a, Gamma1) = splitAux [] Gamma x
+      in
+        (List.rev Gamma0, a, Gamma1)
+      end
+  end
 end

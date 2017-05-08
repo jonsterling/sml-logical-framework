@@ -89,4 +89,9 @@ sig
     val spine : spine -> string
     val ctx : ctx -> string
   end
+
+  structure Ctx :
+  sig
+    val split : ctx -> var -> ctx * class * ctx
+  end
 end

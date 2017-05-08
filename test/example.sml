@@ -39,6 +39,7 @@ struct
   fun Lam (x, e) = C Sg.LAM `@ [[x] \\ e]
   fun Inh e = C Sg.INH `@ [[] \\ e]
   fun Arr (s, t) = C Sg.ARR `@ [[] \\ s, [] \\ t]
+  fun Ap (e1, e2) = C Sg.AP `@ [[] \\ e1, [] \\ e2]
 
   val mySig : ctx = 
     [(C Sg.EXP, [] ==> TYPE),
@@ -51,11 +52,12 @@ struct
   structure Rules = 
   struct
     structure Lf = TinyLf
-    datatype rule = NAT_Z | NAT_S | ARR_I | HYP of Lf.var
+    datatype rule = NAT_Z | NAT_S | ARR_I | ARR_E of Lf.var | HYP of Lf.var
     val printRule = 
       fn NAT_Z => "nat/z"
        | NAT_S => "nat/s"
        | ARR_I => "arr/i"
+       | ARR_E z => "arr/e[" ^ Lf.Sym.toString z ^ "]"
        | HYP x => "hyp[" ^ Lf.Sym.toString x ^ "]"
 
     type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
@@ -69,7 +71,7 @@ struct
         H @ Psi \ rcl
       end
 
-    fun Hyp (z  : var) (H \ rcl) = 
+    fun Hyp (z  : var) (H \ rcl : goal) = 
       let
         val hypcl = Inf.var H z
         val Psi \ rcl' = Unbind.class hypcl
@@ -108,11 +110,35 @@ struct
       in
         Psi \ map #1 H \\ Lam (x, X `@ map eta Hx)
       end
+    
+    fun ArrE z z' (H \ rcl : goal) = 
+      let
+        val (H0, hypcl, H1) = Ctx.split H z
+        val Psi \ ` inh = Unbind.class hypcl
+        val C Sg.INH `@ [[] \ arr] = Unbind.rtm inh
+        val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
+
+        val x = Sym.new ()
+        val hypcl' = Psi @ [(x, [] ==> `(Inh tyA))] --> `(Inh tyB)
+        val rhoz = Sym.Env.singleton z (eta (z', hypcl'))
+        val H1' = SubstN.ctx rhoz H1
+        val rcl' = SubstN.rclass rhoz rcl
+
+        val H' = H0 @ (z, hypcl) :: (z', hypcl') :: H1'
+
+        val X = Sym.new ()
+
+        val abs = (map #1 Psi @ [x]) \\ Ap (z `@ map eta Psi, x `@ [])
+        val ns = map eta (H0 @ [(z, hypcl)]) @ abs :: map eta H1'
+      in
+        [(X, H' \ rcl')] \ map #1 H' \\ X `@ ns
+      end
 
     fun rule fresh = 
       fn NAT_Z => NatZ
        | NAT_S => NatS
        | ARR_I => ArrI (fresh ())
+       | ARR_E z => ArrE z (fresh ())
        | HYP x => Hyp x
   end
 
