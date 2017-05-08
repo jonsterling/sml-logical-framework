@@ -91,7 +91,7 @@ struct
     fun NatS (H \ `inh) =
       let
         val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
-        val X = Sym.named "X"
+        val X = Sym.new ()
         val Psi = [(X, H \ `(Inh Nat))]
       in
         Psi \ map #1 H \\ Su (X `@ map eta H)
@@ -102,7 +102,7 @@ struct
         val C Sg.INH `@ [[] \ arr] = Unbind.rtm inh
         val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
 
-        val X = Sym.named "X"
+        val X = Sym.new ()
 
         val Hx = H @ [(x, [] ==> `(Inh tyA))]
         val Psi = [(X, Hx \ `(Inh tyB))]
@@ -111,7 +111,7 @@ struct
       end
 
     fun rule fresh = 
-      fn NAT_Z => NatZ 
+      fn NAT_Z => NatZ
        | NAT_S => NatS
        | ARR_I => ArrI (fresh ())
        | HYP x => Hyp x
