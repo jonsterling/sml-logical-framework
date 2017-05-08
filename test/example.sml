@@ -48,19 +48,20 @@ struct
      (C Sg.SU, [[] ==> `Exp] ==> `Exp),
      (C Sg.LAM, [[[] ==> `Exp] ==> `Exp] ==> `Exp)]
 
-
   structure Rules = 
   struct
     structure Lf = TinyLf
-    datatype rule = NAT_Z | NAT_S | ARR_I of Lf.var | HYP of Lf.var
+    datatype rule = NAT_Z | NAT_S | ARR_I | HYP of Lf.var
     val printRule = 
       fn NAT_Z => "nat/z"
        | NAT_S => "nat/s"
-       | ARR_I x => "arr/i[" ^ Lf.Sym.toString x ^ "]"
+       | ARR_I => "arr/i"
        | HYP x => "hyp[" ^ Lf.Sym.toString x ^ "]"
 
     type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
     type state = (Lf.var * goal, Lf.ntm) Lf.bind 
+    type names = unit -> Lf.var
+
 
    fun prependHyps (H : ctx) (cl : class) : goal = 
       let
@@ -87,7 +88,7 @@ struct
         [] \ xs \\ Ze
       end
 
-    fun NatS (H \ `inh) : state =
+    fun NatS (H \ `inh) =
       let
         val C Sg.INH `@ [[] \ C Sg.NAT `@ []] = Unbind.rtm inh
         val X = Sym.named "X"
@@ -96,7 +97,7 @@ struct
         Psi \ map #1 H \\ Su (X `@ map eta H)
       end
 
-    fun ArrI x (H \ `inh) : state =
+    fun ArrI x (H \ `inh) =
       let
         val C Sg.INH `@ [[] \ arr] = Unbind.rtm inh
         val C Sg.ARR `@ [[] \ tyA, [] \ tyB] = Unbind.rtm arr
@@ -109,10 +110,10 @@ struct
         Psi \ map #1 H \\ Lam (x, X `@ map eta Hx)
       end
 
-    val rule = 
+    fun rule fresh = 
       fn NAT_Z => NatZ 
        | NAT_S => NatS
-       | ARR_I x => ArrI x
+       | ARR_I => ArrI (fresh ())
        | HYP x => Hyp x
   end
 
@@ -122,12 +123,15 @@ struct
     let
       open Refiner Rules
       val sequence = List.foldr SEQ (EACH [])
+      val >>> = BIND
+      infix >>>
 
-      val x = Sym.named "welp"
+      val x = Sym.named "xwelp"
       val script =
+        [x] >>>
         sequence
           [DEBUG "start",
-           ALL (RULE (ARR_I x)),
+           ALL (RULE ARR_I),
            DEBUG "arr/i",
            ALL (RULE NAT_S),
            DEBUG "nat/s",

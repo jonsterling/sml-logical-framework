@@ -5,8 +5,9 @@ sig
   type rule
   type goal = (Lf.var * Lf.class, Lf.rclass) Lf.bind
   type state = (Lf.var * goal, Lf.ntm) Lf.bind
+  type names = unit -> Lf.var
 
-  val rule : rule -> goal -> state
+  val rule : names -> rule -> goal -> state
   val printRule : rule -> string
 end
 
@@ -25,6 +26,7 @@ sig
      ALL of tactic
    | EACH of tactic list
    | DEBUG of string
+   | BIND of Rules.Lf.var list * multitactic
    | SEQ of multitactic * multitactic
    | ORELSE of multitactic * multitactic
 
