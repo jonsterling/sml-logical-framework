@@ -9,18 +9,27 @@ struct
   datatype ('v, 'a) app = `@ of 'v * 'a list
 
   (* atomic classifiers *)
-  datatype rclass =
-     ` of rtm
+  datatype 'v rclass_ =
+     ` of 'v rtm_
    | TYPE
   and ('a, 'b) bind = \ of 'a list * 'b
-  and class = PI of (var * class, rclass) bind
-  and ntm = LAM of (var, rtm) bind
-  withtype rtm = (var, ntm) app
+  and 'v class_ = PI of ('v * 'v class_, 'v rclass_) bind
+  and 'v ntm_ = LAM of ('v, 'v rtm_) bind
+  withtype 'v rtm_ = ('v, 'v ntm_) app
 
-  type spine = ntm list
-  type ctx = (var * class) list
+  type 'v spine_ = 'v ntm_ list
+  type 'v ctx_ = ('v * 'v class_) list
 
-  infix \ \\ `@ --> ==>
+  type ntm = var ntm_
+  type rtm = var rtm_
+  type rclass = var rclass_
+  type class = var class_
+  type ctx = var ctx_
+  type spine = var spine_
+
+  fun @@ (f, x) = f x
+  infix 0 @@
+  infix 1 \ \\ `@ --> ==>
 
   fun unifyVars (rho1, rho2) (x1, x2) =
     let
@@ -107,6 +116,79 @@ struct
       end
   end
 
+  structure Parsing = 
+  struct
+    val op\\ = op\\
+    val op--> = op-->
+    fun cls ==> cl = 
+      List.map (fn x => ("_", x)) cls --> cl
+  end
+
+  structure Bind = 
+  struct
+
+    exception todo fun ?e = raise e
+    type bind_env = var StringListDict.dict
+    type 'a m = bind_env -> 'a * bind_env
+
+    fun ret a env = (a, env)
+    fun >>= (m : 'a m, f : 'a -> 'b m) : 'b m = 
+      fn env => 
+        let
+          val (a, env') = m env
+        in
+          f a env'
+        end
+
+    fun >> (m, n) = 
+      >>= (m, fn _ => n)
+
+    infixr >>= >>
+
+    fun local_ (f : bind_env -> bind_env) (m : 'a m) : 'a m =  m o f
+    fun addVars xs env = List.foldr (fn (x, env) => StringListDict.insert env (Sym.name x) x) env xs
+    fun peak (xs : string list) (m : var list -> 'a m) : 'a m =
+      let
+        val xs' = List.map Sym.named xs
+      in
+        m xs' o addVars xs'
+      end
+
+    fun run (m : 'a m) : 'a = 
+      #1 (m StringListDict.empty)
+
+    fun vars xs : var list m = 
+      fn env => 
+        (List.map (StringListDict.lookup env) xs, env)
+
+    fun free x : var m = 
+      fn env => 
+        case StringListDict.find env x of 
+           SOME x' => (x', env)
+         | NONE => 
+           let
+             val x' = Sym.named x
+           in
+             (x', StringListDict.insert env x x')
+           end
+
+    fun rtm (x `@ sp) : rtm m =
+      free x >>= (fn x' => 
+        spine sp >>= (fn sp' => 
+          ret @@ x' `@ sp'))
+
+    and ntm (LAM (xs \ r)) : ntm m  =
+      peak xs (fn xs' => 
+        rtm r >>= (fn r' => ret @@ LAM (xs' \ r')))
+
+    and spine sp : spine m = 
+      case sp of 
+         [] => ret []
+       | n::sp => 
+           ntm n >>= (fn n' => 
+             spine sp >>= (fn sp' => 
+               ret @@ n' :: sp'))
+  end
 
   fun eta (x : var, cl : class) : ntm = 
     let
