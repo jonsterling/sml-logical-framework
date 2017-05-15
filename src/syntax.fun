@@ -177,7 +177,14 @@ struct
        | ` r => rtm r >>= (fn r' => ret @@ ` r')
 
     and class (PI (Psi \ rcl)) : class m =
-      ?todo
+      ctx Psi >>= (fn Psi' => 
+        peak (List.map #1 Psi) (fn xs => 
+          let
+            val (_, Psi'') = Ren.rebindCtx xs Psi'
+          in
+            rclass rcl >>= (fn rcl' => 
+              ret @@ PI (Psi'' \ rcl'))
+          end))
 
     and rtm (x `@ sp) : rtm m =
       var x >>= (fn x' => 
