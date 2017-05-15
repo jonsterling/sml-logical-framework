@@ -28,7 +28,6 @@ sig
 
   val eta : var * class -> ntm
 
-
   structure Unbind :
   sig
     val ntm : ntm -> (var, rtm) bind
@@ -43,6 +42,7 @@ sig
     val ==> : string class_ list * string rclass_ -> string class_
   end
 
+  (* For assigning identity to variables in concrete syntax *)
   structure Bind : 
   sig
     type bind_env = var StringListDict.dict
