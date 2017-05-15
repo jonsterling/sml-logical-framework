@@ -1,0 +1,12 @@
+Library
+  signature DICT
+  structure List
+  structure ListPair
+  structure Int
+  structure General
+  structure Option
+  structure String
+  structure StringListDict
+  functor SplayDict
+is
+  cmlib/cmlib.cm

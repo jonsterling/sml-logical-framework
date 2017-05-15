@@ -1,5 +1,6 @@
 local
-  lib/cmlib/cmlib.mlb
+  $(SML_LIB)/basis/basis.mlb
+  lib/cmlib.mlb
   src/lf/symbol.sig
   src/lf/list_util.sig
   src/lf/syntax.sig

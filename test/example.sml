@@ -191,18 +191,19 @@ struct
       val testFunSplit = 
         {goal = [] \ `(Inh (Arr (Arr (Nat, Nat), Nat))),
          script = 
-           [x,f] >>> sequence 
+           sequence 
             [DEBUG "start",
-             ALL (RULE ARR_I),
-             DEBUG "arr/i",
-             ALL (RULE (ARR_E x)),
-             DEBUG "arr/e",
-             ALL (RULE (HYP f)),
-             DEBUG "hyp",
-             ALL (RULE NAT_S),
-             DEBUG "su",
-             ALL (RULE NAT_Z),
-             DEBUG "ze"]}
+             [x,f] >>> sequence 
+               [ALL (RULE ARR_I),
+                DEBUG "arr/i",
+                ALL (RULE (ARR_E x)),
+                DEBUG "arr/e",
+                ALL (RULE (HYP f)),
+                DEBUG "hyp",
+                ALL (RULE NAT_S),
+                DEBUG "su",
+                ALL (RULE NAT_Z),
+                DEBUG "ze"]]}
     in
       print ("TESTING ELABORATION\n---------------------\n");
       runMachine testElaborate;

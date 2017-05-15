@@ -128,56 +128,105 @@ struct
       Psi' \ Ren.ntm rho evd
     end
 
-  structure Print = 
+  structure PP = PrettyPrint
+  structure UP = Unparse  
+
+  structure Pretty = 
   struct
-    fun vars xs = 
-      case xs of
-         [] => ""
-       | [x] => Sym.toString x
-       | x :: xs => Sym.toString x ^ "," ^ vars xs
 
-    fun nameBlocks blocks =
-      case blocks of
-         [] => ""
-       | [xs] => "[" ^ vars xs ^ "]"
-       | xs :: blocks => "[" ^ vars xs ^ "], " ^ nameBlocks blocks
+    val unparse = UP.parens o UP.done 
 
-    fun tactic tac = 
+    fun sep d xs : string = 
+      case xs of 
+         [] => ""
+       | [x] => x
+       | x :: xs => x ^ d ^ sep d xs
+
+    val commaSep = sep ", "
+    fun squares x = "[" ^ x ^ "]"
+    fun quotes x = "\"" ^ x ^ "\""
+
+    val var = Sym.toString
+    val vars = commaSep o List.map var
+    val nameBlocks = commaSep o List.map (squares o vars)
+
+    fun tactic tac : string UP.part = 
       case tac of 
-         RULE rl => printRule rl
+         RULE rl => UP.atom @@ printRule rl
        | MT mtac => multitactic mtac
-    
+
     and multitactic mtac = 
       case mtac of 
          ALL tac => tactic tac
-       | EACH tacs => "[" ^ tactics tacs ^ "]"
-       | DEBUG msg => "debug(\"" ^ msg ^ "\")"
-       | SEQ (mtac1, mtac2) => multitactic mtac1 ^ "; " ^ multitactic mtac2
-       | ORELSE (mtac1, mtac2) => "{" ^ multitactic mtac1 ^ "} | {" ^ multitactic mtac2 ^ "}"
-       | BIND (xs, mtac) => "[" ^ vars xs ^ "] <- {" ^ multitactic mtac ^ "}"
+       | EACH tacs => UP.atom o squares o commaSep @@ List.map (unparse o tactic) tacs
+       | DEBUG msg => UP.adj (UP.atom "debug", UP.atom @@ quotes msg)
+       | SEQ (mtac1, mtac2) => UP.infix' (UP.Right, 0, ";") (multitactic mtac1, multitactic mtac2)
+       | ORELSE (mtac1, mtac2) => UP.infix' (UP.Non, 5, "|") (multitactic mtac1, multitactic mtac2)
+       | BIND (xs, mtac) => UP.infix' (UP.Left, 10, "<-") (UP.atom @@ vars xs, multitactic mtac)
 
-    and tactics tacs = 
-      case tacs of 
-         [] => ""
-       | [tac] => tactic tac 
-       | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
-    
-    fun state (Psi \ evd : state) = 
-      LfPrint.ctx (Goal.ctx Psi)
-        ^ "\n   ===>  "
-        ^ LfPrint.ntm evd
+    val instr : instr -> PP.doc = 
+      fn MTAC mtac =>
+         PP.concat 
+           [PP.text "{", 
+            PP.text o unparse @@ multitactic mtac,
+            PP.text "}"]
+       | AWAIT (x, mtac, st) =>
+         PP.concat 
+           [PP.text "await ", 
+            PP.text @@ Sym.toString x,
+            PP.text " with ",
+            PP.text o unparse @@ multitactic mtac]
+       | POP_NAMES => PP.text "pop-names"
+       | HANDLE _ => PP.text "handler"
+       | _ => PP.text "TODO"
 
-    val instr = 
-      fn MTAC mtac => "{" ^ multitactic mtac ^ "}"
-       | AWAIT (x, mtac, st) => "await[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
-       | PREPEND Psi => "prepend{" ^ LfPrint.ctx (Goal.ctx Psi) ^ "}"
-       | POP_NAMES => "pop-names"
-       | HANDLE _ => "handler"
+    fun intercalate d xs = 
+      case xs of 
+         [] => []
+       | [x] => [x]
+       | x::xs => x :: d :: intercalate d xs
 
     fun stack stk = 
-      case stk of 
-         [] => "[]"
-       | i :: stk => instr i ^ " :: " ^ stack stk
+      PP.group o PP.concat @@
+        intercalate (PP.newline) (List.map (fn x => PP.concat [PP.text "* ", instr x]) stk)
+
+    fun hyp (x, cl) = 
+      PP.concat
+        [PP.text @@ Sym.toString x,
+         PP.text " : ",
+         PP.text @@ LfPrint.class cl]
+
+    fun hyps Psi =
+      PP.group o PP.concat @@
+        intercalate (PP.newline) (List.map hyp Psi)
+
+    fun goal (x, Psi \ rcl : goal) : PP.doc =
+      PP.concat 
+        [PP.text "Goal ", PP.text @@ Sym.toString x,
+         PP.newline,
+         PP.rule #"-",
+         PP.group @@ hyps Psi,
+         PP.newline,
+         PP.text ">> ",
+         PP.text @@ LfPrint.rclass rcl]
+
+    fun goals gls =
+      case gls of 
+         [] => PP.text "[no subgoals]"
+       | _ => PP.group o PP.concat @@ intercalate (PP.concat [PP.newline, PP.newline]) (List.map goal gls)
+
+    fun state (Psi \ evd : state) = 
+      PP.concat
+        [PP.nest 2 @@ PP.concat [PP.newline, goals Psi],
+         PP.newline,PP.newline,
+         PP.rule #"-",
+         PP.nest 2 @@ PP.concat [PP.newline, PP.text @@ LfPrint.ntm evd]]
+  end
+
+  structure Print = 
+  struct
+    val state = PrettyPrint.toString 80 false o Pretty.state
+    val stack = PrettyPrint.toString 80 false o Pretty.stack
   end
 
   structure Exn = 
@@ -289,16 +338,36 @@ struct
             trace = instr :: trace,
             stack = stk}
 
-  fun debugString msg {state, stack, names} = 
-    "[DEBUG] " ^ msg ^ "\n\n"
+  fun debugDoc msg {state, stack, names} : PP.doc = 
+    PP.concat 
+      [PP.newline, PP.newline,
+       PP.text ("[DEBUG] " ^ msg),
+       PP.newline, PP.newline,
+       PP.text "Proof state:",
+       PP.newline,
+       PP.rule #"-",
+       PP.nest 2 @@ Pretty.state state,
+       PP.newline, PP.newline, PP.newline,
+       PP.text "Remaining tasks:",
+       PP.newline,
+       PP.rule #"-",
+       PP.nest 2 o PP.concat @@ [PP.newline, Pretty.stack stack]
+       ]
+    
+  fun debugString msg =
+    PrettyPrint.toString 80 false 
+      o debugDoc msg
+    
+    (*
+        "[DEBUG] " ^ msg ^ "\n\n"
       ^ "Proof state: \n------------------------------\n"
       ^ Print.state state
       ^ "\n\nRemaining tasks: \n------------------------------\n"
       ^ Print.stack stack
       ^ "\n\nName blocks: \n------------------------------\n["
-      ^ Print.nameBlocks names
+      ^ Pretty.nameBlocks names
       ^ "]\n\n"
-
+      *)
 
   fun stepMulti (multi as {multitactic, state as Psi \ evd, stack, names}) : machine step =
     case (Psi, multitactic) of 

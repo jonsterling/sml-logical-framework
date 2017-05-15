@@ -12,7 +12,7 @@ Library
   functor LfSyntaxPrint
   functor LfTyping
 is
-  lib/cmlib/cmlib.cm
+  lib/cmlib.cm
   src/lf/symbol.sig
   src/lf/list_util.sig
   src/lf/syntax.sig

@@ -1,5 +1,9 @@
 Group is
-  lib/cmlib/cmlib.cm
+  lib/cmlib.cm
+  lib/sml-unparse/unparse.cm
+  lib/sml-wpp/wpp.cm
+
+
   src/lf/symbol.sig
   src/lf/list_util.sig
   src/lf/syntax.sig
