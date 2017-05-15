@@ -225,7 +225,6 @@ struct
 
   structure Print = 
   struct
-    val state = PrettyPrint.toString 80 false o Pretty.state
     val stack = PrettyPrint.toString 80 false o Pretty.stack
   end
 
@@ -339,35 +338,31 @@ struct
             stack = stk}
 
   fun debugDoc msg {state, stack, names} : PP.doc = 
-    PP.concat 
-      [PP.newline, PP.newline,
+    PP.concat @@
+      [PP.newline, PP.newline, PP.newline,
        PP.text ("[DEBUG] " ^ msg),
-       PP.newline, PP.newline,
+       PP.newline, PP.rule #"=", PP.newline,
        PP.text "Proof state:",
        PP.newline,
        PP.rule #"-",
        PP.nest 2 @@ Pretty.state state,
-       PP.newline, PP.newline, PP.newline,
-       PP.text "Remaining tasks:",
-       PP.newline,
-       PP.rule #"-",
-       PP.nest 2 o PP.concat @@ [PP.newline, Pretty.stack stack]
-       ]
+       PP.newline, PP.newline, PP.newline]
+      @ (if List.length stack = 0 then [] else 
+           [PP.text "Remaining tasks:",
+            PP.newline,
+            PP.rule #"-",
+            PP.nest 2 o PP.concat @@ [PP.newline, Pretty.stack stack],
+            PP.newline, PP.newline, PP.newline])
+      @ (if List.length names = 0 then [] else
+           [PP.text "Name blocks:",
+            PP.newline,
+            PP.rule #"-",
+            PP.nest 2 o PP.concat @@ [PP.newline, PP.text @@ Pretty.nameBlocks names]])
+
     
   fun debugString msg =
     PrettyPrint.toString 80 false 
       o debugDoc msg
-    
-    (*
-        "[DEBUG] " ^ msg ^ "\n\n"
-      ^ "Proof state: \n------------------------------\n"
-      ^ Print.state state
-      ^ "\n\nRemaining tasks: \n------------------------------\n"
-      ^ Print.stack stack
-      ^ "\n\nName blocks: \n------------------------------\n["
-      ^ Pretty.nameBlocks names
-      ^ "]\n\n"
-      *)
 
   fun stepMulti (multi as {multitactic, state as Psi \ evd, stack, names}) : machine step =
     case (Psi, multitactic) of 
