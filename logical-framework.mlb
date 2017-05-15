@@ -5,11 +5,13 @@ local
   src/lf/syntax.sig
   src/lf/exn.sig
   src/lf/typing.sig
+  src/lf/print.sig
 
   src/lf/list_util.sml
   src/lf/exn.fun
   src/lf/symbol.fun
   src/lf/syntax.fun
+  src/lf/print.fun
   src/lf/typing.fun
 in
   signature LF_SYMBOL
@@ -18,6 +20,10 @@ in
   signature LF_EXN
   signature LF_SYNTAX
   signature LF_TYPING
+  signature LF_SYNTAX_PRINT
   functor LfSymbol
   functor LfSymbolWithConstants
+  functor LfSyntax
+  functor LfSyntaxPrint
+  functor LfTyping
 end

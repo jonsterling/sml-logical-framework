@@ -348,50 +348,6 @@ struct
     and spine rho = List.map (ntm rho)
   end
 
-  structure Print =
-  struct
-    fun var x = 
-      Sym.toString x
-
-    fun vars xs =
-      case xs of
-         [] => ""
-       | x :: [] => var x
-       | x :: xs => var x ^ "," ^ vars xs
-
-    fun class (PI (Psi \ rcl)) =
-      case Psi of
-         [] => rclass rcl
-       | _ => "{" ^ ctx Psi ^ "}" ^ rclass rcl
-
-    and ctx Psi =
-      case Psi of
-         [] => "-"
-       | (x, cl) :: [] => var x ^ ":" ^ class cl
-       | (x, cl) :: Psi' => var x ^ ":" ^ class cl ^ ", " ^ ctx Psi'
-
-    and rclass rcl =
-      case rcl of
-         `r => rtm r
-       | TYPE => "*"
-
-    and rtm (x `@ sp) =
-      case sp of
-         [] => var x
-       | _ => var x ^ "[" ^ spine sp ^ "]"
-
-    and spine sp =
-      case sp of
-         [] => "-"
-       | n :: [] => ntm n
-       | n :: sp => ntm n ^ "," ^ spine sp
-
-    and ntm (LAM (xs \ r)) =
-      case xs of
-         [] => rtm r
-       | _ =>  "[" ^ vars xs ^ "]" ^ rtm r
-  end
-
   structure Ctx = 
   struct
     fun splitAux Gamma0 Gamma1 x = 

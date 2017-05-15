@@ -3,6 +3,8 @@ struct
   structure Rules = R
   open R
 
+  structure LfPrint = LfSyntaxPrint (Lf)
+
   fun @@ (f, x) = f x
   infix @@
 
@@ -161,14 +163,14 @@ struct
        | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
     
     fun state (Psi \ evd : state) = 
-      Print.ctx (Goal.ctx Psi)
+      LfPrint.ctx (Goal.ctx Psi)
         ^ "\n   ===>  "
-        ^ Print.ntm evd
+        ^ LfPrint.ntm evd
 
     val instr = 
       fn MTAC mtac => "{" ^ multitactic mtac ^ "}"
        | AWAIT (x, mtac, st) => "await[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
-       | PREPEND Psi => "prepend{" ^ Print.ctx (Goal.ctx Psi) ^ "}"
+       | PREPEND Psi => "prepend{" ^ LfPrint.ctx (Goal.ctx Psi) ^ "}"
        | POP_NAMES => "pop-names"
        | HANDLE _ => "handler"
 
@@ -187,7 +189,7 @@ struct
       "[ERROR] "
         ^ exnMessage exn
         ^ " when refining goal "
-        ^ Lf.Print.class goal
+        ^ LfPrint.class goal
         ^ "\n\nStack trace:\n"
         ^ Print.stack (List.rev stack)
   end

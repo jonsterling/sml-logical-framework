@@ -4,14 +4,19 @@ Library
   signature LF_SYMBOL_CONSTANT
   signature LF_EXN
   signature LF_SYNTAX
+  signature LF_SYNTAX_PRINT
   signature LF_TYPING
   functor LfSymbol
   functor LfSymbolWithConstants
+  functor LfSyntax
+  functor LfSyntaxPrint
+  functor LfTyping
 is
   lib/cmlib/cmlib.cm
   src/lf/symbol.sig
   src/lf/list_util.sig
   src/lf/syntax.sig
+  src/lf/print.sig
   src/lf/exn.sig
   src/lf/typing.sig
 
@@ -19,4 +24,5 @@ is
   src/lf/exn.fun
   src/lf/symbol.fun
   src/lf/syntax.fun
+  src/lf/print.fun
   src/lf/typing.fun

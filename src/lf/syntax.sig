@@ -109,17 +109,6 @@ sig
     val ctx : subst -> ctx -> ctx
   end
 
-  structure Print : 
-  sig
-    val var : var -> string
-    val rclass : rclass -> string
-    val class : class -> string
-    val rtm : rtm -> string
-    val ntm : ntm -> string 
-    val spine : spine -> string
-    val ctx : ctx -> string
-  end
-
   structure Ctx :
   sig
     val split : ctx -> var -> ctx * class * ctx

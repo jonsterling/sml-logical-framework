@@ -1,6 +1,7 @@
 functor LfTyping (Syn : LF_SYNTAX) : LF_TYPING = 
 struct
   open Syn
+  structure Print = LfSyntaxPrint (Syn)
 
   fun @@ (f, x) = f x
   infix `@ \ \\ @@

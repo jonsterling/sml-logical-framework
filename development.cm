@@ -5,11 +5,13 @@ Group is
   src/lf/syntax.sig
   src/lf/exn.sig
   src/lf/typing.sig
+  src/lf/print.sig
 
   src/lf/list_util.sml
   src/lf/exn.fun
   src/lf/symbol.fun
   src/lf/syntax.fun
+  src/lf/print.fun
   src/lf/typing.fun
 
   src/refiner/refiner.sig
