@@ -49,8 +49,14 @@ sig
     type 'a m
 
     val run : 'a m -> 'a
+
+    val var : string -> var m
+    val rclass : string rclass_ -> rclass m
+    val class : string class_ -> class m
     val ntm : string ntm_ -> ntm m
     val rtm : string rtm_ -> rtm m
+    val spine : string spine_ -> spine m
+    val ctx : string ctx_ -> ctx m
   end
 
   (* alpha equivalence *)

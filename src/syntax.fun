@@ -129,6 +129,9 @@ struct
 
     exception todo fun ?e = raise e
     type bind_env = var StringListDict.dict
+
+    (* assignment of identity to variables is performed in the state monad, so that we can give a single identity to *free* variables of the same name,
+       without taking a context as input. *)
     type 'a m = bind_env -> 'a * bind_env
 
     fun ret a env = (a, env)
@@ -157,11 +160,7 @@ struct
     fun run (m : 'a m) : 'a = 
       #1 (m StringListDict.empty)
 
-    fun vars xs : var list m = 
-      fn env => 
-        (List.map (StringListDict.lookup env) xs, env)
-
-    fun free x : var m = 
+    fun var x : var m = 
       fn env => 
         case StringListDict.find env x of 
            SOME x' => (x', env)
@@ -172,8 +171,16 @@ struct
              (x', StringListDict.insert env x x')
            end
 
-    fun rtm (x `@ sp) : rtm m =
-      free x >>= (fn x' => 
+    fun rclass rcl : rclass m = 
+      case rcl of 
+         TYPE => ret TYPE
+       | ` r => rtm r >>= (fn r' => ret @@ ` r')
+
+    and class (PI (Psi \ rcl)) : class m =
+      ?todo
+
+    and rtm (x `@ sp) : rtm m =
+      var x >>= (fn x' => 
         spine sp >>= (fn sp' => 
           ret @@ x' `@ sp'))
 
@@ -188,6 +195,8 @@ struct
            ntm n >>= (fn n' => 
              spine sp >>= (fn sp' => 
                ret @@ n' :: sp'))
+
+    and ctx Psi : ctx m = ?todo
   end
 
   fun eta (x : var, cl : class) : ntm = 
