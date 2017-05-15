@@ -45,10 +45,10 @@ sig
 
   structure Bind : 
   sig
-    type bind_env
+    type bind_env = var StringListDict.dict
     type 'a m
 
-    val run : 'a m -> 'a
+    val run : 'a m -> bind_env -> 'a * bind_env
 
     val var : string -> var m
     val rclass : string rclass_ -> rclass m

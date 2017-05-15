@@ -155,8 +155,7 @@ struct
         m xs' o addVars xs'
       end
 
-    fun run (m : 'a m) : 'a = 
-      #1 (m StringListDict.empty)
+    fun run m = m
 
     fun var x : var m = 
       fn env => 
@@ -172,7 +171,7 @@ struct
     fun rclass rcl : rclass m = 
       case rcl of 
          TYPE => ret TYPE
-       | ` r => rtm r >>= (fn r' => ret @@ ` r')
+       | ` r => rtm r >>= ret o `
 
     and class (PI (Psi \ rcl)) : class m =
       ctx Psi >>= (fn Psi' => 
