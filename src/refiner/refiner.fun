@@ -50,7 +50,7 @@ struct
   and machine_focus = {tactic: tactic, goal: goal, stack: stack, names: name_block list}
   and machine_multi = {multitactic: multitactic, state: state, stack: stack, names: name_block list}
   and machine_retn = {state: state, stack: stack, names: name_block list}
-  and machine_throw = {exn: exn, goal: goal, trace: stack, stack: stack} 
+  and machine_throw = {exn: exn, goal: goal, trace: stack, stack: stack}
 
   (* The refinement machine has four execution states:
        1. Executing a tactic on a focused goal
@@ -77,34 +77,43 @@ struct
 
   open Lf infix \ \\ `@ ==> -->
 
-  fun cookGoal (Psi \ rcl) = 
-    Psi --> rcl
+  structure Goal :
+  sig
+    val class : goal -> class
+    val ctx : (var * goal) list -> ctx
+    val ren : var Sym.Env.dict -> goal -> goal
+    val subst : ntm Sym.Env.dict -> goal -> goal
+  end = 
+  struct
+    fun class (Psi \ rcl) = 
+      Psi --> rcl
 
-  val cookGoals : (var * goal) list -> ctx = 
-    List.map (mapSnd cookGoal)
+    val ctx : (var * goal) list -> ctx = 
+      List.map (mapSnd class)
 
-  fun substGoal rho (Psi \ rcl) = 
-    let
-      val cl = SubstN.class rho (Psi --> rcl)
-      val Psi' \ rcl' = Unbind.class cl
-      val (rho', Psi'') = Ren.rebindCtx (List.map #1 Psi) Psi'
-    in
-      Psi'' \ Ren.rclass rho' rcl'
-    end
+    fun subst rho (Psi \ rcl) = 
+      let
+        val cl = SubstN.class rho (Psi --> rcl)
+        val Psi' \ rcl' = Unbind.class cl
+        val (rho', Psi'') = Ren.rebindCtx (List.map #1 Psi) Psi'
+      in
+        Psi'' \ Ren.rclass rho' rcl'
+      end
 
-  fun renGoal rho (Psi \ rcl) = 
-    let
-      val cl = Ren.class rho (Psi --> rcl)
-      val Psi' \ rcl' = Unbind.class cl
-      val (rho', Psi'') = Ren.rebindCtx (List.map #1 Psi) Psi'
-    in
-      Psi'' \ Ren.rclass rho' rcl'
-    end
+    fun ren rho (Psi \ rcl) = 
+      let
+        val cl = Ren.class rho (Psi --> rcl)
+        val Psi' \ rcl' = Unbind.class cl
+        val (rho', Psi'') = Ren.rebindCtx (List.map #1 Psi) Psi'
+      in
+        Psi'' \ Ren.rclass rho' rcl'
+      end
+  end
 
   fun substState rho (Psi \ evd : state) = 
     let
       val rho' = List.foldr (fn ((x, _), rho) => Sym.Env.remove rho x) rho Psi
-      val Psi' = map (mapSnd (substGoal rho')) Psi
+      val Psi' = map (mapSnd (Goal.subst rho')) Psi
       val evd' = SubstN.ntm rho' evd
     in
       Psi' \ evd'
@@ -112,7 +121,7 @@ struct
 
   fun renState rho (Psi \ evd) = 
     let
-      val Psi' = map (mapSnd (renGoal rho)) Psi
+      val Psi' = map (mapSnd (Goal.ren rho)) Psi
     in
       Psi' \ Ren.ntm rho evd
     end
@@ -152,14 +161,14 @@ struct
        | tac :: tacs => tactic tac ^ ", " ^ tactics tacs
     
     fun state (Psi \ evd : state) = 
-      Print.ctx (cookGoals Psi)
+      Print.ctx (Goal.ctx Psi)
         ^ "\n   ===>  "
         ^ Print.ntm evd
 
     val instr = 
       fn MTAC mtac => "{" ^ multitactic mtac ^ "}"
        | AWAIT (x, mtac, st) => "await[" ^ Sym.toString x ^ "]{" ^ multitactic mtac ^ "}"
-       | PREPEND Psi => "prepend{" ^ Print.ctx (cookGoals Psi) ^ "}"
+       | PREPEND Psi => "prepend{" ^ Print.ctx (Goal.ctx Psi) ^ "}"
        | POP_NAMES => "pop-names"
        | HANDLE _ => "handler"
 
@@ -187,7 +196,7 @@ struct
     let
       val x = Sym.new ()
     in
-      [(x, goal)] \ eta (x, cookGoal goal)
+      [(x, goal)] \ eta (x, Goal.class goal)
     end
 
   fun runRule {ruleName, goal, stack, names} = 
@@ -269,7 +278,7 @@ struct
 
   fun stepThrow {exn, goal, trace, stack} : machine step =
     case stack of 
-       [] => raise Exn.Refine (exn, cookGoal goal, trace)
+       [] => raise Exn.Refine (exn, Goal.class goal, trace)
      | HANDLE multi :: stk => STEP @@ MULTI multi
      | instr :: stk =>
          STEP o THROW @@
