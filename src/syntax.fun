@@ -126,8 +126,6 @@ struct
 
   structure Bind = 
   struct
-
-    exception todo fun ?e = raise e
     type bind_env = var StringListDict.dict
 
     (* assignment of identity to variables is performed in the state monad, so that we can give a single identity to *free* variables of the same name,
@@ -150,7 +148,7 @@ struct
 
     fun local_ (f : bind_env -> bind_env) (m : 'a m) : 'a m =  m o f
     fun addVars xs env = List.foldr (fn (x, env) => StringListDict.insert env (Sym.name x) x) env xs
-    fun peak (xs : string list) (m : var list -> 'a m) : 'a m =
+    fun peek (xs : string list) (m : var list -> 'a m) : 'a m =
       let
         val xs' = List.map Sym.named xs
       in
@@ -178,7 +176,7 @@ struct
 
     and class (PI (Psi \ rcl)) : class m =
       ctx Psi >>= (fn Psi' => 
-        peak (List.map #1 Psi) (fn xs => 
+        peek (List.map #1 Psi) (fn xs => 
           let
             val (_, Psi'') = Ren.rebindCtx xs Psi'
           in
@@ -192,7 +190,7 @@ struct
           ret @@ x' `@ sp'))
 
     and ntm (LAM (xs \ r)) : ntm m  =
-      peak xs (fn xs' => 
+      peek xs (fn xs' => 
         rtm r >>= (fn r' => ret @@ LAM (xs' \ r')))
 
     and spine sp : spine m = 
@@ -203,7 +201,14 @@ struct
              spine sp >>= (fn sp' => 
                ret @@ n' :: sp'))
 
-    and ctx Psi : ctx m = ?todo
+    and ctx Psi : ctx m = 
+      case Psi of 
+         [] => ret []
+       | (x,cl) :: Psi =>
+         class cl >>= (fn cl' =>
+           peek [x] (fn [x'] =>
+             ctx Psi >>= (fn Psi' => 
+               ret @@ (x', cl') :: Psi')))
   end
 
   fun eta (x : var, cl : class) : ntm = 
