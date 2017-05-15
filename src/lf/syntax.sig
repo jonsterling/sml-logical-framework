@@ -4,17 +4,23 @@ sig
   type var = Sym.symbol
   type 'a env = 'a Sym.Env.dict
 
-  type ntm (* normal terms *)
-  type spine = ntm list
-  type class (* general classifiers *)
-  type ctx = (var * class) list
+  type 'v ntm_ (* normal terms *)
+  type 'v spine_ = 'v ntm_ list
+  type 'v class_ (* general classifiers *)
+  type 'v ctx_ = ('v * 'v class_) list
 
   datatype ('v, 'a) app = `@ of 'v * 'a list
-  datatype ('a, 'b) bind = \ of 'a list * 'b
+  datatype ('v, 'a) bind = \ of 'v list * 'a
 
-  type rtm = (var, ntm) app (* atomic terms *)
+  type 'v rtm_ = ('v, 'v ntm_) app (* atomic terms *)
+  datatype 'v rclass_ = ` of 'v rtm_  | TYPE (* atomic classifiers *)
 
-  datatype rclass = ` of rtm  | TYPE (* atomic classifiers *)
+  type ntm = var ntm_
+  type rtm = var rtm_
+  type rclass = var rclass_
+  type class = var class_
+  type ctx = var ctx_
+  type spine = var spine_
 
   val \\ : var list * rtm -> ntm
   val --> : ctx * rclass -> class
@@ -27,6 +33,30 @@ sig
     val ntm : ntm -> (var, rtm) bind
     val rtm : rtm -> (var, (var, rtm) bind) app
     val class : class -> (var * class, rclass) bind
+  end
+
+  structure Parsing : 
+  sig
+    val \\ : string list * string rtm_ -> string ntm_
+    val --> : string ctx_ * string rclass_ -> string class_
+    val ==> : string class_ list * string rclass_ -> string class_
+  end
+
+  (* For assigning identity to variables in concrete syntax *)
+  structure Bind : 
+  sig
+    type bind_env = var StringListDict.dict
+    type 'a m
+
+    val run : 'a m -> bind_env -> 'a * bind_env
+
+    val var : string -> var m
+    val rclass : string rclass_ -> rclass m
+    val class : string class_ -> class m
+    val ntm : string ntm_ -> ntm m
+    val rtm : string rtm_ -> rtm m
+    val spine : string spine_ -> spine m
+    val ctx : string ctx_ -> ctx m
   end
 
   (* alpha equivalence *)

@@ -9,14 +9,14 @@ Library
   functor LfSymbolWithConstants
 is
   lib/cmlib/cmlib.cm
-  src/symbol.sig
-  src/list_util.sig
-  src/syntax.sig
-  src/exn.sig
-  src/typing.sig
+  src/lf/symbol.sig
+  src/lf/list_util.sig
+  src/lf/syntax.sig
+  src/lf/exn.sig
+  src/lf/typing.sig
 
-  src/list_util.sml
-  src/exn.fun
-  src/symbol.fun
-  src/syntax.fun
-  src/typing.fun
+  src/lf/list_util.sml
+  src/lf/exn.fun
+  src/lf/symbol.fun
+  src/lf/syntax.fun
+  src/lf/typing.fun
